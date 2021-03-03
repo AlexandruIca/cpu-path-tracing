@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
 
 #include <fmt/format.h>
 #include <glm/glm.hpp>
@@ -239,7 +240,9 @@ int main(int argc, char* argv[])
     Vec const cx = Vec(w * .5135 / h);
     Vec const cy = (cx % cam.d).norm() * .5135;
     Vec r;
-    Vec* c = new Vec[w * h];
+    std::vector<Vec> c{};
+    c.reserve(w * h);
+    // Vec* c = new Vec[w * h];
 
 #pragma omp parallel for schedule(dynamic, 1) private(r) // OpenMP
     for(int y = 0; y < h; y++) {                         // Loop over image rows
