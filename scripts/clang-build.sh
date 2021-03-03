@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
-# Invoke this script with guix:
-# guix environment -m ../scripts/gcc-latest.scm --container -- ./gcc-build.sh
-
-CC=clang CXX=clang++ cmake -G"Ninja" ..
+CC=clang CXX=clang++ cmake -G"Ninja" \
+    -DENABLE_SANITIZER_ADDRESS=ON \
+    -DENABLE_SANITIZER_UNDEFINED_BEHAVIOR=ON \
+    ..
 
 mv compile_commands.json ..
 
