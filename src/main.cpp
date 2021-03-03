@@ -9,41 +9,51 @@
 #include <glm/glm.hpp>
 
 struct Vec
-{                   // Usage: time ./smallpt 5000 && xv image.ppm
-    double x, y, z; // position, also color (r,g,b)
-    Vec(double x_ = 0, double y_ = 0, double z_ = 0)
+{
+    double x{ 0.0 };
+    double y{ 0.0 };
+    double z{ 0.0 };
+
+    explicit Vec(double x_ = 0, double y_ = 0, double z_ = 0) noexcept
+        : x{ x_ }
+        , y{ y_ }
+        , z{ z_ }
     {
-        x = x_;
-        y = y_;
-        z = z_;
     }
+
     Vec operator+(const Vec& b) const
     {
         return Vec(x + b.x, y + b.y, z + b.z);
     }
+
     Vec operator-(const Vec& b) const
     {
         return Vec(x - b.x, y - b.y, z - b.z);
     }
+
     Vec operator*(double b) const
     {
         return Vec(x * b, y * b, z * b);
     }
+
     Vec mult(const Vec& b) const
     {
         return Vec(x * b.x, y * b.y, z * b.z);
     }
+
     Vec& norm()
     {
         return *this = *this * (1 / sqrt(x * x + y * y + z * z));
     }
+
     double dot(const Vec& b) const
     {
         return x * b.x + y * b.y + z * b.z;
-    } // cross:
-    Vec operator%(Vec const& b) const
+    }
+
+    [[nodiscard]] auto cross(Vec const& b) const noexcept -> Vec
     {
-        return Vec(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x);
+        return Vec{ y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x };
     }
 };
 
@@ -69,6 +79,7 @@ struct Sphere
     double rad;  // radius
     Vec p, e, c; // position, emission, color
     Refl_t refl; // reflection type (DIFFuse, SPECular, REFRactive)
+
     Sphere(double rad_, Vec p_, Vec e_, Vec c_, Refl_t refl_)
         : rad(rad_)
         , p(p_)
@@ -77,6 +88,7 @@ struct Sphere
         , refl(refl_)
     {
     }
+
     double intersect(const Ray& r) const
     {                     // returns distance, 0 if nohit
         Vec op = p - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
@@ -184,8 +196,8 @@ Vec radiance(const Ray& r, int depth, unsigned short* Xi)
         double const r2s = sqrt(r2);              // sin_theta
 
         Vec const w = nl;
-        Vec const u = ((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)) % w).norm();
-        Vec const v = w % u;
+        Vec const u = (fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)).cross(w).norm();
+        Vec const v = w.cross(u);
         Vec const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
 
         return obj.e + f.mult(radiance(Ray(x, d), depth, Xi));
@@ -199,7 +211,7 @@ Vec radiance(const Ray& r, int depth, unsigned short* Xi)
 
         // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
     }
-    else if(obj.refl == SPEC) { // Ideal SPECULAR reflection
+    if(obj.refl == SPEC) { // Ideal SPECULAR reflection
         return obj.e + f.mult(radiance(Ray(x, r.d - n * 2 * n.dot(r.d)), depth, Xi));
     }
 
@@ -239,7 +251,7 @@ int main(int argc, char* argv[])
 
     Ray cam(Vec(50, 52, 295.6), Vec(0, -0.042612, -1).norm()); // cam pos, dir
     Vec const cx = Vec(w * .5135 / h);
-    Vec const cy = (cx % cam.d).norm() * .5135;
+    Vec const cy = cx.cross(cam.d).norm() * .5135;
     Vec r;
     std::vector<Vec> c{};
     c.reserve(w * h);
