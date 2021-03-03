@@ -15,12 +15,20 @@ struct Vec
     double y{ 0.0 };
     double z{ 0.0 };
 
-    explicit Vec(double x_ = 0, double y_ = 0, double z_ = 0) noexcept
+    Vec() noexcept = delete;
+    Vec(Vec const&) noexcept = default;
+    Vec(Vec&&) noexcept = default;
+    ~Vec() noexcept = default;
+
+    Vec(double x_, double y_, double z_) noexcept
         : x{ x_ }
         , y{ y_ }
         , z{ z_ }
     {
     }
+
+    auto operator=(Vec const&) noexcept -> Vec& = default;
+    auto operator=(Vec&&) noexcept -> Vec& = default;
 
     [[nodiscard]] auto operator+(const Vec& b) const noexcept -> Vec
     {
@@ -101,9 +109,8 @@ struct Sphere
         if(det < 0) {
             return 0;
         }
-        else {
-            det = sqrt(det);
-        }
+
+        det = sqrt(det);
 
         return (t = b - det) > eps ? t : ((t = b + det) > eps ? t : 0);
     }
@@ -112,32 +119,33 @@ struct Sphere
 Sphere spheres[] = {
     // Scene: radius, position, emission, color, material
     Sphere(1e5,
-           Vec(1e5 + 1, 40.8, 81.6),
-           Vec(),
-           Vec(.75, .25, .25),
+           Vec{ 1e5 + 1, 40.8, 81.6 },
+           Vec{ 0.0, 0.0, 0.0 },
+           Vec{ 0.75, 0.25, 0.25 },
            DIFF), // Left
     Sphere(1e5,
-           Vec(-1e5 + 99, 40.8, 81.6),
-           Vec(),
-           Vec(.25, .25, .75),
-           DIFF),                                                     // Right
-    Sphere(1e5, Vec(50, 40.8, 1e5), Vec(), Vec(.75, .75, .75), DIFF), // Back
-    Sphere(1e5, Vec(50, 40.8, -1e5 + 170), Vec(), Vec(), DIFF),       // Front
-    Sphere(1e5, Vec(50, 1e5, 81.6), Vec(), Vec(.75, .75, .75), DIFF), // Bottom
+           Vec{ -1e5 + 99, 40.8, 81.6 },
+           Vec{ 0.0, 0.0, 0.0 },
+           Vec{ 0.25, 0.25, 0.75 },
+           DIFF),                                                                               // Right
+    Sphere(1e5, Vec{ 50, 40.8, 1e5 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.75, 0.75 }, DIFF),     // Back
+    Sphere(1e5, Vec{ 50, 40.8, -1e5 + 170 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.0, 0.0, 0.0 }, DIFF), // Front
+    Sphere(1e5, Vec{ 50, 1e5, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.75, 0.75 }, DIFF),     // Bottom
     Sphere(1e5,
-           Vec(50, -1e5 + 81.6, 81.6),
-           Vec(),
-           Vec(.25, .75, .15),
-           DIFF),                                                      // Top
-    Sphere(16.5, Vec(27, 16.5, 47), Vec(), Vec(1, 1, 1) * .999, SPEC), // Mirror
-    Sphere(16.5, Vec(65, 16.5, 37), Vec(), Vec(0.6, 0.1, 0.6), SPEC),  // Mirror Purple
-    Sphere(16.5, Vec(45, 46.5, 50), Vec(22, 22, 22), Vec(), DIFF),     // Light up
-    Sphere(16.5, Vec(73, 16.5, 78), Vec(), Vec(1, 1, 1) * .999, REFR), // Glass
-                                                                       // Sphere(600,
-                                                                       //        Vec(50, 681.6 - .27, 81.6),
-                                                                       //        Vec(6, 6, 6),
-                                                                       //        Vec(0.2, 0.2, 0.5),
-                                                                       //        DIFF) // Light
+           Vec{ 50, -1e5 + 81.6, 81.6 },
+           Vec{ 0.0, 0.0, 0.0 },
+           Vec{ 0.25, 0.75, 0.15 },
+           DIFF),                                                                          // Top
+    Sphere(16.5, Vec{ 27, 16.5, 47 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, SPEC), // Mirror
+    Sphere(16.5, Vec{ 65, 16.5, 37 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.6, 0.1, 0.6 }, SPEC),   // Mirror Purple
+    Sphere(16.5, Vec{ 45, 46.5, 50 }, Vec{ 22, 22, 22 }, Vec{ 0.0, 0.0, 0.0 }, DIFF),      // Light up
+    Sphere(
+        16.5, Vec{ 73, 16.5, 78 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, REFR), // Glass
+                                                                                        // Sphere(600,
+                                                                                        //        Vec(50, 681.6 -
+                                                                                        //        .27, 81.6), Vec(6, 6,
+                                                                                        //        6), Vec(0.2, 0.2,
+                                                                                        //        0.5), DIFF) // Light
 };
 
 inline double clamp(double x)
@@ -170,7 +178,7 @@ Vec radiance(const Ray& r, int depth, unsigned short* Xi)
     int id = 0; // id of intersected object
 
     if(!intersect(r, t, id)) {
-        return Vec(); // if miss, return black
+        return Vec{ 0.0, 0.0, 0.0 }; // if miss, return black
     }
 
     const Sphere& obj = spheres[id]; // the hit object
@@ -197,7 +205,7 @@ Vec radiance(const Ray& r, int depth, unsigned short* Xi)
         double const r2s = sqrt(r2);              // sin_theta
 
         Vec const w = nl;
-        Vec const u = (fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)).cross(w).norm();
+        Vec const u = (fabs(w.x) > 0.1 ? Vec{ 0, 1, 0 } : Vec{ 1, 0, 0 }).cross(w).norm();
         Vec const v = w.cross(u);
         Vec const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
 
@@ -222,7 +230,7 @@ Vec radiance(const Ray& r, int depth, unsigned short* Xi)
     double const nt = 1.5;
     double const nnt = into ? nc / nt : nt / nc;
     double const ddn = r.d.dot(nl);
-    double cos2t;
+    double cos2t{ 0.0 };
 
     if((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) { // Total internal reflection
         return obj.e + f.mult(radiance(reflRay, depth, Xi));
@@ -244,16 +252,16 @@ Vec radiance(const Ray& r, int depth, unsigned short* Xi)
                                     : radiance(reflRay, depth, Xi) * Re + radiance(Ray(x, tdir), depth, Xi) * Tr);
 }
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int constexpr w = 1024;
     int constexpr h = 768;
     int const samps = argc == 2 ? atoi(argv[1]) / 4 : 1; // # samples
 
-    Ray cam(Vec(50, 52, 295.6), Vec(0, -0.042612, -1).norm()); // cam pos, dir
-    Vec const cx = Vec(w * .5135 / h);
-    Vec const cy = cx.cross(cam.d).norm() * .5135;
-    Vec r;
+    Ray cam(Vec{ 50, 52, 295.6 }, Vec{ 0, -0.042612, -1 }.norm()); // cam pos, dir
+    Vec const cx = Vec{ w * .5135 / h, 0, 0 };
+    Vec const cy = cx.cross(cam.d).norm() * 0.5135;
+    Vec r{ 0, 0, 0 };
     std::vector<Vec> c{};
     c.reserve(w * h);
 
@@ -281,8 +289,8 @@ int main(int argc, char* argv[])
                         r = r + radiance(Ray(cam.o + d * 140, d.norm()), 0, Xi) * (1. / samps);
                     } // Camera rays are pushed ^^^^^ forward to start in
                       // interior
-                    c[i] = c[i] + Vec(clamp(r.x), clamp(r.y), clamp(r.z)) * .25;
-                    r = Vec();
+                    c[i] = c[i] + Vec{ clamp(r.x), clamp(r.y), clamp(r.z) } * .25;
+                    r = Vec{ 0, 0, 0 };
                 }
             }
         }
