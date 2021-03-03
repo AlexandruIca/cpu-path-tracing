@@ -1,7 +1,7 @@
 #include <algorithm>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 struct Vec
 {                   // Usage: time ./smallpt 5000 && xv image.ppm
