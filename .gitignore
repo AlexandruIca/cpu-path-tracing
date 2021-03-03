@@ -1,0 +1,7 @@
+build/
+.clangd/
+
+compile_commands.json
+.diff_deleteme.txt
+cformat.sh
+ctidy.sh
