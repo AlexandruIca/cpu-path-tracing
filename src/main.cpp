@@ -21,32 +21,32 @@ struct Vec
     {
     }
 
-    Vec operator+(const Vec& b) const
+    [[nodiscard]] auto operator+(const Vec& b) const noexcept -> Vec
     {
-        return Vec(x + b.x, y + b.y, z + b.z);
+        return Vec{ x + b.x, y + b.y, z + b.z };
     }
 
-    Vec operator-(const Vec& b) const
+    [[nodiscard]] auto operator-(const Vec& b) const noexcept -> Vec
     {
-        return Vec(x - b.x, y - b.y, z - b.z);
+        return Vec{ x - b.x, y - b.y, z - b.z };
     }
 
-    Vec operator*(double b) const
+    [[nodiscard]] auto operator*(double b) const noexcept -> Vec
     {
-        return Vec(x * b, y * b, z * b);
+        return Vec{ x * b, y * b, z * b };
     }
 
-    Vec mult(const Vec& b) const
+    [[nodiscard]] auto mult(const Vec& b) const noexcept -> Vec
     {
-        return Vec(x * b.x, y * b.y, z * b.z);
+        return Vec{ x * b.x, y * b.y, z * b.z };
     }
 
-    Vec& norm()
+    [[nodiscard]] auto norm() noexcept -> Vec&
     {
         return *this = *this * (1 / sqrt(x * x + y * y + z * z));
     }
 
-    double dot(const Vec& b) const
+    [[nodiscard]] auto dot(const Vec& b) const noexcept -> double
     {
         return x * b.x + y * b.y + z * b.z;
     }
