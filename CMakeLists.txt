@@ -50,6 +50,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
 set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
 
 find_package(glm REQUIRED)
+find_package(fmt REQUIRED)
 
 add_subdirectory(src)
 
