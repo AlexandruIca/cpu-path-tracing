@@ -1,0 +1,15 @@
+---
+Checks: >
+    *,
+    -fuchsia-*,
+    -google-*,
+    -zircon-*,
+    -abseil-*,
+    -llvm-*,
+    -misc-non-private-member-variables-in-classes,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-pro-type-union-access,
+    -readability-magic-numbers,
+WarningsAsErrors: '1'
+HeaderFilterRegex: ''
+FormatStyle: none
