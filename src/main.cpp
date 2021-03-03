@@ -261,13 +261,11 @@ auto main(int argc, char* argv[]) -> int
     Ray cam(Vec{ 50, 52, 295.6 }, Vec{ 0, -0.042612, -1 }.norm()); // cam pos, dir
     Vec const cx = Vec{ w * .5135 / h, 0, 0 };
     Vec const cy = cx.cross(cam.d).norm() * 0.5135;
-    Vec r{ 0, 0, 0 };
     std::vector<Vec> c{};
     c.reserve(w * h);
 
-#pragma omp parallel for schedule(dynamic, 1) private(r) // OpenMP
-    for(int y = 0; y < h; y++) {                         // Loop over image rows
-        // fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4, 100. * y / (h - 1));
+#pragma omp parallel for schedule(dynamic, 1)
+    for(int y = 0; y < h; y++) {
         std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
         unsigned short Xi[3] = { 0, 0, (unsigned short)(y * y * y) };
@@ -277,6 +275,7 @@ auto main(int argc, char* argv[]) -> int
 
             for(int sy = 0; sy < 2; sy++) {     // 2x2 subpixel rows
                 for(int sx = 0; sx < 2; sx++) { // 2x2 subpixel cols
+                    Vec r{ 0, 0, 0 };
                     for(int s = 0; s < samps; s++) {
                         double const r1 = 2 * erand48(Xi);
                         double const dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
