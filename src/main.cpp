@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 #include <fmt/format.h>
@@ -255,11 +256,11 @@ int main(int argc, char* argv[])
     Vec r;
     std::vector<Vec> c{};
     c.reserve(w * h);
-    // Vec* c = new Vec[w * h];
 
 #pragma omp parallel for schedule(dynamic, 1) private(r) // OpenMP
     for(int y = 0; y < h; y++) {                         // Loop over image rows
-        fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4, 100. * y / (h - 1));
+        // fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4, 100. * y / (h - 1));
+        std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
         unsigned short Xi[3] = { 0, 0, (unsigned short)(y * y * y) };
 
