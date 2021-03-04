@@ -78,6 +78,11 @@ struct ray
 {
     vec3 origin{ 0, 0, 0 };
     vec3 direction{ 0, 0, 0 };
+
+    [[nodiscard]] auto at(double const t) const noexcept -> vec3
+    {
+        return origin + direction * t;
+    }
 };
 
 enum class reflection_type
@@ -248,15 +253,15 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 [[nodiscard]] auto radiance(const ray& r, int const depth, pt::rand_state& rng) -> vec3
 {
     constexpr int russian_roulette_threshold = 4;
-    double t = 0.0;
+    double closest_distance = 0.0;
     std::size_t id = 0;
 
-    if(intersect(r, t, id) <= epsilon) {
+    if(intersect(r, closest_distance, id) <= epsilon) {
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
     const sphere_t& obj = spheres.at(id);
-    vec3 const x = r.origin + r.direction * t;
+    vec3 const x = r.at(closest_distance); // r.origin + r.direction * closest_distance;
     vec3 const n = (x - obj.position).norm();
     vec3 const nl = n.dot(r.direction) < 0 ? n : n * -1;
     vec3 f = obj.color;
