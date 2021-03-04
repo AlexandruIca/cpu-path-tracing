@@ -202,6 +202,16 @@ std::array<Sphere, 10> spheres = { {
     return Ray{ hit_point, original.d - outward_normal * 2.0 * outward_normal.dot(original.d) };
 }
 
+[[nodiscard]] auto dielectric_ray(Vec const& hit_point, Vec const& uv, Vec const& normal, double const etai_over_etat)
+    -> Ray
+{
+    auto const cos_theta = std::min((uv * -1.0).dot(normal), 1.0);
+    Vec const r_out_perp = (uv + normal * cos_theta) * etai_over_etat;
+    Vec const r_out_parallel = normal * (-std::sqrt(std::abs(1.0 - r_out_perp.dot(r_out_perp))));
+
+    return Ray{ hit_point, r_out_perp + r_out_parallel };
+}
+
 [[nodiscard]] auto radiance(const Ray& r, int const depth, pt::rand_state& rng) -> Vec
 {
     double t = 0.0;     // distance to intersection
@@ -237,46 +247,36 @@ std::array<Sphere, 10> spheres = { {
         return obj.e + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
     }
     case REFR: {
-        Ray const reflRay{ x, r.d - n * 2 * n.dot(r.d) }; // Ideal dielectric REFRACTION
-        bool const into = n.dot(nl) > 0;                  // Ray from outside going in?
-        double const nc = 1;
-        double const nt = 1.5;
-        double const nnt = into ? nc / nt : nt / nc;
-        double const ddn = r.d.dot(nl);
-        double cos2t{ 0.0 };
+        constexpr double refraction_index = 1.5;
+        double const refraction_ratio = (n.dot(nl) > 0) ? (1.0 / refraction_index) : refraction_index;
+        auto ray_in = r;
+        auto const unit_direction = ray_in.d.norm();
 
-        if((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) { // Total internal reflection
-            return obj.e + f.mult(radiance(reflRay, depth + 1, rng));
-        }
+        double const cos_theta = std::min((unit_direction * -1.0).dot(nl), 1.0);
+        double const sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
-        Vec const tdir = (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
-        double const a = nt - nc;
-        double const b = nt + nc;
-        double const R0 = a * a / (b * b);
-        double const c = 1 - (into ? -ddn : tdir.dot(n));
-        double const Re = R0 + (1 - R0) * c * c * c * c * c;
-        double const Tr = 1 - Re;
-        double const P = 0.25 + 0.5 * Re;
-        double const RP = Re / P;
-        double const TP = Tr / (1 - P);
-        Vec refr{ 0, 0, 0 };
+        bool cannot_refract = refraction_ratio * sin_theta > 1.0;
+        Ray refl{};
 
-        if(depth > 2) {
-            // Russian Roulette
-            if(rng.generate() < P) {
-                refr = radiance(Ray{ x, tdir }, depth + 1, rng) * RP;
-            }
-            else {
-                refr = radiance(Ray{ x, tdir }, depth + 1, rng) * TP;
-            }
+        auto reflectance = [](double const cosine, double const ref_idx) noexcept -> double {
+            constexpr int offset = 5;
+            auto r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+            r0 *= r0;
+            return r0 + (1.0 - r0) * std::pow(1.0 - cosine, offset);
+        };
+
+        if(cannot_refract || reflectance(cos_theta, refraction_ratio) > rng.generate()) {
+            refl = specular_ray(r, x, n);
         }
         else {
-            refr = radiance(reflRay, depth + 1, rng) * Re + radiance(Ray{ x, tdir }, depth + 1, rng) * Tr;
+            refl = dielectric_ray(x, unit_direction, nl, refraction_ratio);
         }
 
-        return obj.e + f.mult(refr);
+        return obj.e + f.mult(radiance(refl, depth + 1, rng));
     }
     }
+
+    return Vec{ 0, 0, 0 };
 }
 
 auto main(int argc, char* argv[]) -> int
@@ -284,9 +284,9 @@ auto main(int argc, char* argv[]) -> int
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
-    int const samps = argc == 2 ? std::stoi(args[0]) / 4 : 1; // # samples
+    int const samps = argc == 2 ? std::stoi(args[0]) / 4 : 1;
 
-    Ray cam{ Vec{ 50, 52, 295.6 }, Vec{ 0, -0.042612, -1 }.norm() }; // cam pos, dir
+    Ray cam{ Vec{ 50, 51, 295.6 }, Vec{ 0, -0.042612, -1 }.norm() };
     Vec const cx = Vec{ w * 0.5135 / h, 0, 0 };
     Vec const cy = cx.cross(cam.d).norm() * 0.5135;
     std::vector<Vec> c{};
