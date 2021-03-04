@@ -60,7 +60,7 @@ struct vec3
 
     [[nodiscard]] auto norm() noexcept -> vec3&
     {
-        return *this = *this * (1 / sqrt(x * x + y * y + z * z));
+        return *this = *this * (1 / std::sqrt(x * x + y * y + z * z));
     }
 
     [[nodiscard]] auto dot(const vec3& b) const noexcept -> double
@@ -114,7 +114,7 @@ struct sphere_t
             return 0;
         }
 
-        det = sqrt(det);
+        det = std::sqrt(det);
         t = b - det;
 
         if(t > epsilon) {
@@ -214,15 +214,15 @@ std::array<sphere_t, 10> spheres = { {
 
 [[nodiscard]] auto diffuse_ray(vec3 const& hit_point, [[maybe_unused]] vec3 const& normal, pt::rand_state& rng) -> ray
 {
-    double const r1 = 2 * pi * rng.generate(); // phi
-    double const r2 = rng.generate();          // 1 - cos^2 theta
-    double const sin_theta = sqrt(r2);
-    double const cos_theta = std::sqrt(1.0 - r2);
+    double const phi = 2 * pi * rng.generate();
+    double const random_angle = rng.generate(); // 1 - cos^2 theta
+    double const sin_theta = std::sqrt(random_angle);
+    double const cos_theta = std::sqrt(1.0 - random_angle);
 
     vec3 const w = normal;
     vec3 const u = (std::abs(w.x) > 0.1 ? vec3{ 0, 1, 0 } : vec3{ 1, 0, 0 }).cross(w).norm();
     vec3 const v = w.cross(u);
-    vec3 const new_direction = (u * std::cos(r1) * sin_theta + v * std::sin(r1) * sin_theta + w * cos_theta).norm();
+    vec3 const new_direction = (u * std::cos(phi) * sin_theta + v * std::sin(phi) * sin_theta + w * cos_theta).norm();
 
     return ray{ hit_point, new_direction };
 }
@@ -344,9 +344,9 @@ auto main(int argc, char* argv[]) -> int
                         vec3 r{ 0, 0, 0 };
                         for(int s = 0; s < samps; s++) {
                             double const r1 = 2.0 * rng.generate();
-                            double const dx = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+                            double const dx = r1 < 1.0 ? std::sqrt(r1) - 1.0 : 1.0 - std::sqrt(2.0 - r1);
                             double const r2 = 2.0 * rng.generate();
-                            double const dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+                            double const dy = r2 < 1.0 ? std::sqrt(r2) - 1.0 : 1.0 - std::sqrt(2.0 - r2);
 
                             vec3 d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
                                      cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.direction;
