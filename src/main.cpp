@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -134,26 +135,28 @@ std::array<Sphere, 10> spheres = { {
     return static_cast<int>(std::round(corrected * 255.0));
 }
 
-[[nodiscard]] auto intersect(const Ray& r, double& t, int& id) noexcept -> double
+[[nodiscard]] auto intersect(const Ray& r, double& t, std::size_t& id) noexcept -> double
 {
-    double n = sizeof(spheres) / sizeof(Sphere), d, inf = t = 1e20;
+    constexpr double inf = 1e20;
+    t = inf;
 
-    for(int i = int(n); i--;) {
-        if((d = spheres[i].intersect(r)) && d < t) {
+    for(std::size_t i = 0; i < spheres.size(); i++) {
+        if(double const d = spheres.at(i).intersect(r); d > 0 && d < t) {
             t = d;
             id = i;
         }
     }
 
-    return t < inf;
+    return static_cast<double>(t < inf);
 }
 
 [[nodiscard]] auto radiance(const Ray& r, int depth, unsigned short* Xi) -> Vec
 {
-    double t;   // distance to intersection
-    int id = 0; // id of intersected object
+    double t;           // distance to intersection
+    std::size_t id = 0; // id of intersected object
 
-    if(!intersect(r, t, id)) {
+    constexpr double epsilon = 0.0001;
+    if(intersect(r, t, id) <= epsilon) {
         return Vec{ 0.0, 0.0, 0.0 }; // if miss, return black
     }
 
