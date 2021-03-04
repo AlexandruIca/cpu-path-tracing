@@ -11,6 +11,8 @@
 #include <fmt/format.h>
 #include <glm/glm.hpp>
 
+constexpr double epsilon = 1e-4;
+
 struct Vec
 {
     double x{ 0.0 };
@@ -89,11 +91,13 @@ struct Sphere
     Vec c{ 0, 0, 0 };            // position, emission, color
     Refl_t refl{ Refl_t::DIFF }; // reflection type (DIFFuse, SPECular, REFRactive)
 
+    ///
+    /// \returns 0 if no intersection was found, something greater than 0 otherwise
+    ///
     [[nodiscard]] auto intersect(const Ray& r) const noexcept -> double
-    {                     // returns distance, 0 if nohit
-        Vec op = p - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
+    {
+        Vec op = p - r.o;
         double t = 0.0;
-        double const eps = 1e-4;
         double const b = op.dot(r.d);
         double det = b * b - op.dot(op) + rad * rad;
 
@@ -102,8 +106,19 @@ struct Sphere
         }
 
         det = sqrt(det);
+        t = b - det;
 
-        return (t = b - det) > eps ? t : ((t = b + det) > eps ? t : 0);
+        if(t > epsilon) {
+            return t;
+        }
+
+        t = b + det;
+
+        if(t > epsilon) {
+            return t;
+        }
+
+        return 0.0;
     }
 };
 
@@ -135,6 +150,9 @@ std::array<Sphere, 10> spheres = { {
     return static_cast<int>(std::round(corrected * 255.0));
 }
 
+///
+/// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
+///
 [[nodiscard]] auto intersect(const Ray& r, double& t, std::size_t& id) noexcept -> double
 {
     constexpr double inf = 1e20;
@@ -155,7 +173,6 @@ std::array<Sphere, 10> spheres = { {
     double t;           // distance to intersection
     std::size_t id = 0; // id of intersected object
 
-    constexpr double epsilon = 0.0001;
     if(intersect(r, t, id) <= epsilon) {
         return Vec{ 0.0, 0.0, 0.0 }; // if miss, return black
     }
