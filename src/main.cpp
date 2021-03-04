@@ -197,6 +197,11 @@ std::array<Sphere, 10> spheres = { {
     // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
 }
 
+[[nodiscard]] auto specular_ray(Ray const& original, Vec const& hit_point, Vec const& outward_normal) -> Ray
+{
+    return Ray{ hit_point, original.d - outward_normal * 2.0 * outward_normal.dot(original.d) };
+}
+
 [[nodiscard]] auto radiance(const Ray& r, int const depth, pt::rand_state& rng) -> Vec
 {
     double t = 0.0;     // distance to intersection
@@ -224,11 +229,11 @@ std::array<Sphere, 10> spheres = { {
         }
     }
 
-    if(obj.refl == DIFF) { // Ideal DIFFUSE reflection
+    if(obj.refl == DIFF) {
         return obj.e + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
     }
-    if(obj.refl == SPEC) { // Ideal SPECULAR reflection
-        return obj.e + f.mult(radiance(Ray{ x, r.d - n * 2 * n.dot(r.d) }, depth + 1, rng));
+    if(obj.refl == SPEC) {
+        return obj.e + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
     }
 
     Ray const reflRay{ x, r.d - n * 2 * n.dot(r.d) }; // Ideal dielectric REFRACTION
