@@ -307,7 +307,6 @@ auto main(int argc, char* argv[]) -> int
                     }
 
                     c[i] = c[i] + Vec{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
-                    r = Vec{ 0, 0, 0 };
                 }
             }
         }
