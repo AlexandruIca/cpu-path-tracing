@@ -53,7 +53,7 @@ struct vec3
         return vec3{ x * b, y * b, z * b };
     }
 
-    [[nodiscard]] auto mult(const vec3& b) const noexcept -> vec3
+    [[nodiscard]] auto blend(const vec3& b) const noexcept -> vec3
     {
         return vec3{ x * b.x, y * b.y, z * b.z };
     }
@@ -281,10 +281,10 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
     switch(obj.reflection) {
     case reflection_type::diffuse: {
-        return obj.emission + color.mult(radiance(diffuse_ray(hit_point, normal, rng), depth + 1, rng));
+        return obj.emission + color.blend(radiance(diffuse_ray(hit_point, normal, rng), depth + 1, rng));
     }
     case reflection_type::specular: {
-        return obj.emission + color.mult(radiance(specular_ray(r, hit_point, outward_normal), depth + 1, rng));
+        return obj.emission + color.blend(radiance(specular_ray(r, hit_point, outward_normal), depth + 1, rng));
     }
     case reflection_type::dielectric: {
         constexpr double refraction_index = 2.0;
@@ -312,7 +312,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
             refl = dielectric_ray(hit_point, unit_direction, normal, refraction_ratio);
         }
 
-        return obj.emission + color.mult(radiance(refl, depth + 1, rng));
+        return obj.emission + color.blend(radiance(refl, depth + 1, rng));
     }
     }
 
