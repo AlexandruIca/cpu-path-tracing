@@ -74,10 +74,10 @@ struct vec3
     }
 };
 
-struct Ray
+struct ray
 {
-    vec3 o{ 0, 0, 0 };
-    vec3 d{ 0, 0, 0 };
+    vec3 origin{ 0, 0, 0 };
+    vec3 direction{ 0, 0, 0 };
 };
 
 enum Refl_t
@@ -98,11 +98,11 @@ struct Sphere
     ///
     /// \returns 0 if no intersection was found, something greater than 0 otherwise
     ///
-    [[nodiscard]] auto intersect(const Ray& r) const noexcept -> double
+    [[nodiscard]] auto intersect(const ray& r) const noexcept -> double
     {
-        vec3 op = p - r.o;
+        vec3 op = p - r.origin;
         double t = 0.0;
-        double const b = op.dot(r.d);
+        double const b = op.dot(r.direction);
         double det = b * b - op.dot(op) + rad * rad;
 
         if(det < 0) {
@@ -159,7 +159,7 @@ std::array<Sphere, 10> spheres = { {
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
 ///
-[[nodiscard]] auto intersect(const Ray& r, double& t, std::size_t& id) noexcept -> double
+[[nodiscard]] auto intersect(const ray& r, double& t, std::size_t& id) noexcept -> double
 {
     constexpr double inf = 1e20;
     t = inf;
@@ -174,7 +174,7 @@ std::array<Sphere, 10> spheres = { {
     return static_cast<double>(t < inf);
 }
 
-[[nodiscard]] auto diffuse_ray(vec3 const& hit_point, vec3 const& normal, pt::rand_state& rng) -> Ray
+[[nodiscard]] auto diffuse_ray(vec3 const& hit_point, vec3 const& normal, pt::rand_state& rng) -> ray
 {
     double const r1 = 2 * pi * rng.generate(); // phi
     double const r2 = rng.generate();          // 1 - cos^2 theta
@@ -185,7 +185,7 @@ std::array<Sphere, 10> spheres = { {
     vec3 const v = w.cross(u);
     vec3 const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
 
-    return Ray{ hit_point, d };
+    return ray{ hit_point, d };
     // double const r1 = erand48(Xi);
     // double const r2 = erand48(Xi);
     // double const sin_phi = sqrt(r1); // r1 == 1 - cos^2(phi)
@@ -197,22 +197,22 @@ std::array<Sphere, 10> spheres = { {
     // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
 }
 
-[[nodiscard]] auto specular_ray(Ray const& original, vec3 const& hit_point, vec3 const& outward_normal) -> Ray
+[[nodiscard]] auto specular_ray(ray const& original, vec3 const& hit_point, vec3 const& outward_normal) -> ray
 {
-    return Ray{ hit_point, original.d - outward_normal * 2.0 * outward_normal.dot(original.d) };
+    return ray{ hit_point, original.direction - outward_normal * 2.0 * outward_normal.dot(original.direction) };
 }
 
 [[nodiscard]] auto
-dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double const etai_over_etat) -> Ray
+dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double const etai_over_etat) -> ray
 {
     auto const cos_theta = std::min((uv * -1.0).dot(normal), 1.0);
     vec3 const r_out_perp = (uv + normal * cos_theta) * etai_over_etat;
     vec3 const r_out_parallel = normal * (-std::sqrt(std::abs(1.0 - r_out_perp.dot(r_out_perp))));
 
-    return Ray{ hit_point, r_out_perp + r_out_parallel };
+    return ray{ hit_point, r_out_perp + r_out_parallel };
 }
 
-[[nodiscard]] auto radiance(const Ray& r, int const depth, pt::rand_state& rng) -> vec3
+[[nodiscard]] auto radiance(const ray& r, int const depth, pt::rand_state& rng) -> vec3
 {
     double t = 0.0;
     std::size_t id = 0;
@@ -222,9 +222,9 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
     }
 
     const Sphere& obj = spheres.at(id);
-    vec3 const x = r.o + r.d * t;
+    vec3 const x = r.origin + r.direction * t;
     vec3 const n = (x - obj.p).norm();
-    vec3 const nl = n.dot(r.d) < 0 ? n : n * -1;
+    vec3 const nl = n.dot(r.direction) < 0 ? n : n * -1;
     vec3 f = obj.c;
 
     double const p = std::max({ f.x, f.y, f.z });
@@ -250,13 +250,13 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         constexpr double refraction_index = 2.0;
         double const refraction_ratio = (n.dot(nl) > 0) ? (1.0 / refraction_index) : refraction_index;
         auto ray_in = r;
-        auto const unit_direction = ray_in.d.norm();
+        auto const unit_direction = ray_in.direction.norm();
 
         double const cos_theta = std::min((unit_direction * -1.0).dot(nl), 1.0);
         double const sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
         bool cannot_refract = refraction_ratio * sin_theta > 1.0;
-        Ray refl{};
+        ray refl{};
 
         auto reflectance = [](double const cosine, double const ref_idx) noexcept -> double {
             constexpr int offset = 5;
@@ -286,9 +286,9 @@ auto main(int argc, char* argv[]) -> int
     int constexpr h = 768;
     int const samps = argc == 2 ? std::stoi(args[0]) / 4 : 1;
 
-    Ray cam{ vec3{ 50, 51, 295.6 }, vec3{ 0, -0.042612, -1 }.norm() };
+    ray cam{ vec3{ 50, 51, 295.6 }, vec3{ 0, -0.042612, -1 }.norm() };
     vec3 const cx = vec3{ w * 0.5135 / h, 0, 0 };
-    vec3 const cy = cx.cross(cam.d).norm() * 0.5135;
+    vec3 const cy = cx.cross(cam.direction).norm() * 0.5135;
     std::vector<vec3> c{};
     c.reserve(w * h);
 
@@ -317,9 +317,9 @@ auto main(int argc, char* argv[]) -> int
                             double const dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 
                             vec3 d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
-                                     cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.d;
+                                     cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.direction;
 
-                            r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
+                            r = r + radiance(ray{ cam.origin + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
                         }
 
                         c[i] = c[i] + vec3{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
