@@ -247,6 +247,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
 [[nodiscard]] auto radiance(const ray& r, int const depth, pt::rand_state& rng) -> vec3
 {
+    constexpr int russian_roulette_threshold = 4;
     double t = 0.0;
     std::size_t id = 0;
 
@@ -262,8 +263,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
     double const p = std::max({ f.x, f.y, f.z });
 
-    if(depth > 4) {
-        // Russina Roulette
+    if(depth > russian_roulette_threshold) {
         if(rng.generate() < p) {
             f = f * (1.0 / p);
         }
