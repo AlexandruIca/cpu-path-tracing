@@ -212,27 +212,19 @@ std::array<sphere_t, 10> spheres = { {
     return static_cast<double>(t < inf);
 }
 
-[[nodiscard]] auto diffuse_ray(vec3 const& hit_point, vec3 const& normal, pt::rand_state& rng) -> ray
+[[nodiscard]] auto diffuse_ray(vec3 const& hit_point, [[maybe_unused]] vec3 const& normal, pt::rand_state& rng) -> ray
 {
     double const r1 = 2 * pi * rng.generate(); // phi
     double const r2 = rng.generate();          // 1 - cos^2 theta
-    double const r2s = sqrt(r2);               // sin_theta
+    double const sin_theta = sqrt(r2);
+    double const cos_theta = std::sqrt(1.0 - r2);
 
     vec3 const w = normal;
-    vec3 const u = (fabs(w.x) > 0.1 ? vec3{ 0, 1, 0 } : vec3{ 1, 0, 0 }).cross(w).norm();
+    vec3 const u = (std::abs(w.x) > 0.1 ? vec3{ 0, 1, 0 } : vec3{ 1, 0, 0 }).cross(w).norm();
     vec3 const v = w.cross(u);
-    vec3 const new_direction = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
+    vec3 const new_direction = (u * std::cos(r1) * sin_theta + v * std::sin(r1) * sin_theta + w * cos_theta).norm();
 
     return ray{ hit_point, new_direction };
-    // double const r1 = erand48(Xi);
-    // double const r2 = erand48(Xi);
-    // double const sin_phi = sqrt(r1); // r1 == 1 - cos^2(phi)
-    // double const cos_phi = sqrt(std::max(0.0, 1 - r1));
-    // double const theta = 2 * 3.14159265 * r2;
-
-    // auto const new_direction = Vec{ sin_phi * cos(theta), sin_phi * sin(theta), cos_phi };
-
-    // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
 }
 
 [[nodiscard]] auto specular_ray(ray const& original, vec3 const& hit_point, vec3 const& outward_normal) -> ray
