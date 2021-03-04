@@ -15,6 +15,7 @@
 #include "random_state.hpp"
 
 constexpr double epsilon = 1e-4;
+constexpr double pi = 3.14159265358979323846;
 
 struct Vec
 {
@@ -200,10 +201,10 @@ std::array<Sphere, 10> spheres = { {
         }
     }
 
-    if(obj.refl == DIFF) {                           // Ideal DIFFUSE reflection
-        double const r1 = 2 * M_PI * rng.generate(); // phi
-        double const r2 = rng.generate();            // 1 - cos^2 theta
-        double const r2s = sqrt(r2);                 // sin_theta
+    if(obj.refl == DIFF) {                         // Ideal DIFFUSE reflection
+        double const r1 = 2 * pi * rng.generate(); // phi
+        double const r2 = rng.generate();          // 1 - cos^2 theta
+        double const r2s = sqrt(r2);               // sin_theta
 
         Vec const w = nl;
         Vec const u = (fabs(w.x) > 0.1 ? Vec{ 0, 1, 0 } : Vec{ 1, 0, 0 }).cross(w).norm();
