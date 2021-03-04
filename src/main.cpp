@@ -134,7 +134,6 @@ std::array<Sphere, 10> spheres = { {
     Sphere{ 16.5, Vec{ 65, 16.5, 37 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.6, 0.1, 0.6 }, SPEC },            // Mirror Purple
     Sphere{ 16.5, Vec{ 45, 46.5, 50 }, Vec{ 22, 22, 22 }, Vec{ 0.0, 0.0, 0.0 }, DIFF },               // Light up
     Sphere{ 16.5, Vec{ 73, 16.5, 78 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, REFR },          // Glass
-
     // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
 } };
 
@@ -171,25 +170,24 @@ std::array<Sphere, 10> spheres = { {
     return static_cast<double>(t < inf);
 }
 
-[[nodiscard]] auto radiance(const Ray& r, int depth, unsigned short* Xi) -> Vec
+[[nodiscard]] auto radiance(const Ray& r, int const depth, unsigned short* Xi) -> Vec
 {
-    double t;           // distance to intersection
+    double t = 0.0;     // distance to intersection
     std::size_t id = 0; // id of intersected object
 
     if(intersect(r, t, id) <= epsilon) {
         return Vec{ 0.0, 0.0, 0.0 }; // if miss, return black
     }
 
-    const Sphere& obj = spheres[id]; // the hit object
+    const Sphere& obj = spheres.at(id); // the hit object
     Vec const x = r.o + r.d * t;
     Vec const n = (x - obj.p).norm();
     Vec const nl = n.dot(r.d) < 0 ? n : n * -1;
     Vec f = obj.c;
 
-    // double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
     double const p = std::max({ f.x, f.y, f.z });
 
-    if(++depth > 5) {
+    if(depth > 4) {
         if(erand48(Xi) < p) {
             f = f * (1.0 / p);
         }
@@ -208,7 +206,7 @@ std::array<Sphere, 10> spheres = { {
         Vec const v = w.cross(u);
         Vec const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
 
-        return obj.e + f.mult(radiance(Ray{ x, d }, depth, Xi));
+        return obj.e + f.mult(radiance(Ray{ x, d }, depth + 1, Xi));
         // double const r1 = erand48(Xi);
         // double const r2 = erand48(Xi);
         // double const sin_phi = sqrt(r1); // r1 == 1 - cos^2(phi)
@@ -220,7 +218,7 @@ std::array<Sphere, 10> spheres = { {
         // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
     }
     if(obj.refl == SPEC) { // Ideal SPECULAR reflection
-        return obj.e + f.mult(radiance(Ray{ x, r.d - n * 2 * n.dot(r.d) }, depth, Xi));
+        return obj.e + f.mult(radiance(Ray{ x, r.d - n * 2 * n.dot(r.d) }, depth + 1, Xi));
     }
 
     Ray const reflRay{ x, r.d - n * 2 * n.dot(r.d) }; // Ideal dielectric REFRACTION
@@ -232,11 +230,12 @@ std::array<Sphere, 10> spheres = { {
     double cos2t{ 0.0 };
 
     if((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) { // Total internal reflection
-        return obj.e + f.mult(radiance(reflRay, depth, Xi));
+        return obj.e + f.mult(radiance(reflRay, depth + 1, Xi));
     }
 
     Vec const tdir = (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
-    double a = nt - nc, b = nt + nc;
+    double const a = nt - nc;
+    double const b = nt + nc;
     double const R0 = a * a / (b * b);
     double const c = 1 - (into ? -ddn : tdir.dot(n));
     double const Re = R0 + (1 - R0) * c * c * c * c * c;
@@ -245,10 +244,11 @@ std::array<Sphere, 10> spheres = { {
     double const RP = Re / P;
     double const TP = Tr / (1 - P);
 
-    return obj.e + f.mult(depth > 2 ? (erand48(Xi) < P ? // Russian roulette
-                                           radiance(reflRay, depth, Xi) * RP
-                                                       : radiance(Ray{ x, tdir }, depth, Xi) * TP)
-                                    : radiance(reflRay, depth, Xi) * Re + radiance(Ray{ x, tdir }, depth, Xi) * Tr);
+    return obj.e + f.mult(depth > 2
+                              ? (erand48(Xi) < P ? // Russian roulette
+                                     radiance(reflRay, depth + 1, Xi) * RP
+                                                 : radiance(Ray{ x, tdir }, depth + 1, Xi) * TP)
+                              : radiance(reflRay, depth + 1, Xi) * Re + radiance(Ray{ x, tdir }, depth + 1, Xi) * Tr);
 }
 
 auto main(int argc, char* argv[]) -> int
