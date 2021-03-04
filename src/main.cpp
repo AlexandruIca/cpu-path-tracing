@@ -138,9 +138,12 @@ std::array<Sphere, 10> spheres = { {
     // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
 } };
 
+///
+/// \brief Clamps x to (0.0, 1.0).
+///
 [[nodiscard]] auto clamp(double const x) noexcept -> double
 {
-    return x < 0 ? 0 : x > 1 ? 1 : x;
+    return std::clamp(x, 0.0, 1.0);
 }
 
 [[nodiscard]] auto toInt(double const x) noexcept -> int
