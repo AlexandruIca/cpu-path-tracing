@@ -85,23 +85,16 @@ enum Refl_t
 
 struct Sphere
 {
-    double rad;  // radius
-    Vec p, e, c; // position, emission, color
-    Refl_t refl; // reflection type (DIFFuse, SPECular, REFRactive)
+    double rad{ 0.0 }; // radius
+    Vec p{ 0, 0, 0 };
+    Vec e{ 0, 0, 0 };
+    Vec c{ 0, 0, 0 };            // position, emission, color
+    Refl_t refl{ Refl_t::DIFF }; // reflection type (DIFFuse, SPECular, REFRactive)
 
-    Sphere(double rad_, Vec p_, Vec e_, Vec c_, Refl_t refl_)
-        : rad(rad_)
-        , p(p_)
-        , e(e_)
-        , c(c_)
-        , refl(refl_)
-    {
-    }
-
-    double intersect(const Ray& r) const
+    [[nodiscard]] auto intersect(const Ray& r) const noexcept -> double
     {                     // returns distance, 0 if nohit
         Vec op = p - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-        double t;
+        double t = 0.0;
         double const eps = 1e-4;
         double const b = op.dot(r.d);
         double det = b * b - op.dot(op) + rad * rad;
@@ -118,34 +111,18 @@ struct Sphere
 
 Sphere spheres[] = {
     // Scene: radius, position, emission, color, material
-    Sphere(1e5,
-           Vec{ 1e5 + 1, 40.8, 81.6 },
-           Vec{ 0.0, 0.0, 0.0 },
-           Vec{ 0.75, 0.25, 0.25 },
-           DIFF), // Left
-    Sphere(1e5,
-           Vec{ -1e5 + 99, 40.8, 81.6 },
-           Vec{ 0.0, 0.0, 0.0 },
-           Vec{ 0.25, 0.25, 0.75 },
-           DIFF),                                                                               // Right
-    Sphere(1e5, Vec{ 50, 40.8, 1e5 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.75, 0.75 }, DIFF),     // Back
-    Sphere(1e5, Vec{ 50, 40.8, -1e5 + 170 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.0, 0.0, 0.0 }, DIFF), // Front
-    Sphere(1e5, Vec{ 50, 1e5, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.75, 0.75 }, DIFF),     // Bottom
-    Sphere(1e5,
-           Vec{ 50, -1e5 + 81.6, 81.6 },
-           Vec{ 0.0, 0.0, 0.0 },
-           Vec{ 0.25, 0.75, 0.15 },
-           DIFF),                                                                          // Top
-    Sphere(16.5, Vec{ 27, 16.5, 47 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, SPEC), // Mirror
-    Sphere(16.5, Vec{ 65, 16.5, 37 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.6, 0.1, 0.6 }, SPEC),   // Mirror Purple
-    Sphere(16.5, Vec{ 45, 46.5, 50 }, Vec{ 22, 22, 22 }, Vec{ 0.0, 0.0, 0.0 }, DIFF),      // Light up
-    Sphere(
-        16.5, Vec{ 73, 16.5, 78 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, REFR), // Glass
-                                                                                        // Sphere(600,
-                                                                                        //        Vec(50, 681.6 -
-                                                                                        //        .27, 81.6), Vec(6, 6,
-                                                                                        //        6), Vec(0.2, 0.2,
-                                                                                        //        0.5), DIFF) // Light
+    Sphere{ 1e5, Vec{ 1e5 + 1, 40.8, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.25, 0.25 }, DIFF },   // Left
+    Sphere{ 1e5, Vec{ -1e5 + 99, 40.8, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.25, 0.25, 0.75 }, DIFF }, // Right
+    Sphere{ 1e5, Vec{ 50, 40.8, 1e5 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.75, 0.75 }, DIFF },         // Back
+    Sphere{ 1e5, Vec{ 50, 40.8, -1e5 + 170 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.0, 0.0, 0.0 }, DIFF },     // Front
+    Sphere{ 1e5, Vec{ 50, 1e5, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.75, 0.75 }, DIFF },         // Bottom
+    Sphere{ 1e5, Vec{ 50, -1e5 + 81.6, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.25, 0.75, 0.15 }, DIFF }, // Top
+    Sphere{ 16.5, Vec{ 27, 16.5, 47 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, SPEC },          // Mirror
+    Sphere{ 16.5, Vec{ 65, 16.5, 37 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.6, 0.1, 0.6 }, SPEC },            // Mirror Purple
+    Sphere{ 16.5, Vec{ 45, 46.5, 50 }, Vec{ 22, 22, 22 }, Vec{ 0.0, 0.0, 0.0 }, DIFF },               // Light up
+    Sphere{ 16.5, Vec{ 73, 16.5, 78 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, REFR },          // Glass
+
+    // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
 };
 
 inline double clamp(double x)
