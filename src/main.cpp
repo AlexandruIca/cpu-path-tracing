@@ -80,11 +80,11 @@ struct ray
     vec3 direction{ 0, 0, 0 };
 };
 
-enum Refl_t
+enum class reflection_type
 {
-    DIFF,
-    SPEC,
-    REFR
+    diffuse,
+    specular,
+    dielectric
 };
 
 struct Sphere
@@ -93,7 +93,7 @@ struct Sphere
     vec3 p{ 0, 0, 0 };
     vec3 e{ 0, 0, 0 };
     vec3 c{ 0, 0, 0 };
-    Refl_t refl{ Refl_t::DIFF };
+    reflection_type refl{ reflection_type::diffuse };
 
     ///
     /// \returns 0 if no intersection was found, something greater than 0 otherwise
@@ -128,16 +128,50 @@ struct Sphere
 
 std::array<Sphere, 10> spheres = { {
     // Scene: radius, position, emission, color, material
-    Sphere{ 1e5, vec3{ 1e5 + 1, 40.8, 81.6 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.75, 0.25, 0.25 }, DIFF },   // Left
-    Sphere{ 1e5, vec3{ -1e5 + 99, 40.8, 81.6 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.25, 0.25, 0.75 }, DIFF }, // Right
-    Sphere{ 1e5, vec3{ 50, 40.8, 1e5 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.75, 0.75, 0.75 }, DIFF },         // Back
-    Sphere{ 1e5, vec3{ 50, 40.8, -1e5 + 170 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.0, 0.0, 0.0 }, DIFF },     // Front
-    Sphere{ 1e5, vec3{ 50, 1e5, 81.6 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.75, 0.75, 0.75 }, DIFF },         // Bottom
-    Sphere{ 1e5, vec3{ 50, -1e5 + 81.6, 81.6 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.25, 0.75, 0.15 }, DIFF }, // Top
-    Sphere{ 16.5, vec3{ 27, 16.5, 47 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 1, 1, 1 } * 0.999, SPEC },          // Mirror
-    Sphere{ 16.5, vec3{ 65, 16.5, 37 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.6, 0.1, 0.6 }, SPEC },   // Mirror Purple
-    Sphere{ 16.5, vec3{ 45, 46.5, 50 }, vec3{ 22, 22, 22 }, vec3{ 0.0, 0.0, 0.0 }, DIFF },      // Light up
-    Sphere{ 16.5, vec3{ 73, 16.5, 78 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 1, 1, 1 } * 0.999, REFR }, // Glass
+    Sphere{ 1e5,
+            vec3{ 1e5 + 1, 40.8, 81.6 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 0.75, 0.25, 0.25 },
+            reflection_type::diffuse }, // Left
+    Sphere{ 1e5,
+            vec3{ -1e5 + 99, 40.8, 81.6 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 0.25, 0.25, 0.75 },
+            reflection_type::diffuse }, // Right
+    Sphere{
+        1e5, vec3{ 50, 40.8, 1e5 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.75, 0.75, 0.75 }, reflection_type::diffuse }, // Back
+    Sphere{ 1e5,
+            vec3{ 50, 40.8, -1e5 + 170 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 0.0, 0.0, 0.0 },
+            reflection_type::diffuse }, // Front
+    Sphere{ 1e5,
+            vec3{ 50, 1e5, 81.6 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 0.75, 0.75, 0.75 },
+            reflection_type::diffuse }, // Bottom
+    Sphere{ 1e5,
+            vec3{ 50, -1e5 + 81.6, 81.6 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 0.25, 0.75, 0.15 },
+            reflection_type::diffuse }, // Top
+    Sphere{ 16.5,
+            vec3{ 27, 16.5, 47 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 1, 1, 1 } * 0.999,
+            reflection_type::specular }, // Mirror
+    Sphere{ 16.5,
+            vec3{ 65, 16.5, 37 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 0.6, 0.1, 0.6 },
+            reflection_type::specular }, // Mirror Purple
+    Sphere{
+        16.5, vec3{ 45, 46.5, 50 }, vec3{ 22, 22, 22 }, vec3{ 0.0, 0.0, 0.0 }, reflection_type::diffuse }, // Light up
+    Sphere{ 16.5,
+            vec3{ 73, 16.5, 78 },
+            vec3{ 0.0, 0.0, 0.0 },
+            vec3{ 1, 1, 1 } * 0.999,
+            reflection_type::dielectric }, // Glass
     // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
 } };
 
@@ -240,13 +274,13 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
     }
 
     switch(obj.refl) {
-    case DIFF: {
+    case reflection_type::diffuse: {
         return obj.e + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
     }
-    case SPEC: {
+    case reflection_type::specular: {
         return obj.e + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
     }
-    case REFR: {
+    case reflection_type::dielectric: {
         constexpr double refraction_index = 2.0;
         double const refraction_ratio = (n.dot(nl) > 0) ? (1.0 / refraction_index) : refraction_index;
         auto ray_in = r;
