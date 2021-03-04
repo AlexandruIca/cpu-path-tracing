@@ -229,51 +229,54 @@ std::array<Sphere, 10> spheres = { {
         }
     }
 
-    if(obj.refl == DIFF) {
+    switch(obj.refl) {
+    case DIFF: {
         return obj.e + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
     }
-    if(obj.refl == SPEC) {
+    case SPEC: {
         return obj.e + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
     }
+    case REFR: {
+        Ray const reflRay{ x, r.d - n * 2 * n.dot(r.d) }; // Ideal dielectric REFRACTION
+        bool const into = n.dot(nl) > 0;                  // Ray from outside going in?
+        double const nc = 1;
+        double const nt = 1.5;
+        double const nnt = into ? nc / nt : nt / nc;
+        double const ddn = r.d.dot(nl);
+        double cos2t{ 0.0 };
 
-    Ray const reflRay{ x, r.d - n * 2 * n.dot(r.d) }; // Ideal dielectric REFRACTION
-    bool const into = n.dot(nl) > 0;                  // Ray from outside going in?
-    double const nc = 1;
-    double const nt = 1.5;
-    double const nnt = into ? nc / nt : nt / nc;
-    double const ddn = r.d.dot(nl);
-    double cos2t{ 0.0 };
+        if((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) { // Total internal reflection
+            return obj.e + f.mult(radiance(reflRay, depth + 1, rng));
+        }
 
-    if((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) { // Total internal reflection
-        return obj.e + f.mult(radiance(reflRay, depth + 1, rng));
-    }
+        Vec const tdir = (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
+        double const a = nt - nc;
+        double const b = nt + nc;
+        double const R0 = a * a / (b * b);
+        double const c = 1 - (into ? -ddn : tdir.dot(n));
+        double const Re = R0 + (1 - R0) * c * c * c * c * c;
+        double const Tr = 1 - Re;
+        double const P = 0.25 + 0.5 * Re;
+        double const RP = Re / P;
+        double const TP = Tr / (1 - P);
+        Vec refr{ 0, 0, 0 };
 
-    Vec const tdir = (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
-    double const a = nt - nc;
-    double const b = nt + nc;
-    double const R0 = a * a / (b * b);
-    double const c = 1 - (into ? -ddn : tdir.dot(n));
-    double const Re = R0 + (1 - R0) * c * c * c * c * c;
-    double const Tr = 1 - Re;
-    double const P = 0.25 + 0.5 * Re;
-    double const RP = Re / P;
-    double const TP = Tr / (1 - P);
-    Vec refr{ 0, 0, 0 };
-
-    if(depth > 2) {
-        // Russian Roulette
-        if(rng.generate() < P) {
-            refr = radiance(Ray{ x, tdir }, depth + 1, rng) * RP;
+        if(depth > 2) {
+            // Russian Roulette
+            if(rng.generate() < P) {
+                refr = radiance(Ray{ x, tdir }, depth + 1, rng) * RP;
+            }
+            else {
+                refr = radiance(Ray{ x, tdir }, depth + 1, rng) * TP;
+            }
         }
         else {
-            refr = radiance(Ray{ x, tdir }, depth + 1, rng) * TP;
+            refr = radiance(reflRay, depth + 1, rng) * Re + radiance(Ray{ x, tdir }, depth + 1, rng) * Tr;
         }
-    }
-    else {
-        refr = radiance(reflRay, depth + 1, rng) * Re + radiance(Ray{ x, tdir }, depth + 1, rng) * Tr;
-    }
 
-    return obj.e + f.mult(refr);
+        return obj.e + f.mult(refr);
+    }
+    }
 }
 
 auto main(int argc, char* argv[]) -> int
