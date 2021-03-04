@@ -13,7 +13,6 @@
 #include <taskflow/taskflow.hpp>
 
 #include "random_state.hpp"
-
 #include "vec.hpp"
 
 constexpr double epsilon = 1e-4;

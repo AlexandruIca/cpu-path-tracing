@@ -16,16 +16,8 @@ struct rand_state
 
     rand_state() = delete;
 
-    [[nodiscard]] static auto default_with_seed(unsigned short const seed) -> rand_state
-    {
-        return rand_state{ std::mt19937{ std::random_device{}() * seed },
-                           std::uniform_real_distribution<double>{ 0.0, 1.0 } };
-    }
-
-    [[nodiscard]] auto generate() -> double
-    {
-        return dist(rng);
-    }
+    [[nodiscard]] static auto default_with_seed(unsigned short seed) -> rand_state;
+    [[nodiscard]] auto generate() -> double;
 };
 
 } // namespace pt
