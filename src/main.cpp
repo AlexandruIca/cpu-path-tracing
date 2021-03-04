@@ -371,6 +371,8 @@ auto main(int argc, char* argv[]) -> int
 
     executor.run(taskflow).wait();
 
+    std::cerr << std::endl;
+
     std::ofstream g{ "image.ppm" };
     g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
 
