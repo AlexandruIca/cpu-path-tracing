@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -105,7 +106,7 @@ struct Sphere
     }
 };
 
-Sphere spheres[] = {
+std::array<Sphere, 10> spheres = { {
     // Scene: radius, position, emission, color, material
     Sphere{ 1e5, Vec{ 1e5 + 1, 40.8, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.75, 0.25, 0.25 }, DIFF },   // Left
     Sphere{ 1e5, Vec{ -1e5 + 99, 40.8, 81.6 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 0.25, 0.25, 0.75 }, DIFF }, // Right
@@ -119,7 +120,7 @@ Sphere spheres[] = {
     Sphere{ 16.5, Vec{ 73, 16.5, 78 }, Vec{ 0.0, 0.0, 0.0 }, Vec{ 1, 1, 1 } * 0.999, REFR },          // Glass
 
     // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
-};
+} };
 
 inline double clamp(double x)
 {
