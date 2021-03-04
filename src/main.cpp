@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <fmt/format.h>
@@ -188,11 +189,12 @@ std::array<Sphere, 10> spheres = { {
     double const p = std::max({ f.x, f.y, f.z });
 
     if(depth > 4) {
+        // Russina Roulette
         if(erand48(Xi) < p) {
             f = f * (1.0 / p);
         }
         else {
-            return obj.e; // R.R.
+            return obj.e;
         }
     }
 
@@ -263,9 +265,10 @@ std::array<Sphere, 10> spheres = { {
 
 auto main(int argc, char* argv[]) -> int
 {
+    std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
-    int const samps = argc == 2 ? atoi(argv[1]) / 4 : 1; // # samples
+    int const samps = argc == 2 ? std::stoi(args[1]) / 4 : 1; // # samples
 
     Ray cam{ Vec{ 50, 52, 295.6 }, Vec{ 0, -0.042612, -1 }.norm() }; // cam pos, dir
     Vec const cx = Vec{ w * .5135 / h, 0, 0 };
@@ -277,27 +280,29 @@ auto main(int argc, char* argv[]) -> int
     for(int y = 0; y < h; y++) {
         std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
-        unsigned short Xi[3] = { 0, 0, (unsigned short)(y * y * y) };
+        std::array<unsigned short, 3> Xi{ { 0, 0, static_cast<unsigned short>(y * y * y) } };
 
         for(unsigned short x = 0; x < w; x++) { // Loop cols
-            int i = (h - y - 1) * w + x;
+            auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
 
-            for(int sy = 0; sy < 2; sy++) {     // 2x2 subpixel rows
-                for(int sx = 0; sx < 2; sx++) { // 2x2 subpixel cols
+            // 2x2 subpixel rows
+            for(int sy = 0; sy < 2; sy++) {
+                // 2x2 subpixel cols
+                for(int sx = 0; sx < 2; sx++) {
                     Vec r{ 0, 0, 0 };
                     for(int s = 0; s < samps; s++) {
-                        double const r1 = 2 * erand48(Xi);
+                        double const r1 = 2 * erand48(Xi.data());
                         double const dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
-                        double const r2 = 2 * erand48(Xi);
+                        double const r2 = 2 * erand48(Xi.data());
                         double const dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
 
-                        Vec d =
-                            cx * (((sx + .5 + dx) / 2 + x) / w - .5) + cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
+                        Vec d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
+                                cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.d;
 
-                        r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, Xi) * (1. / samps);
-                    } // Camera rays are pushed ^^^^^ forward to start in
-                      // interior
-                    c[i] = c[i] + Vec{ clamp(r.x), clamp(r.y), clamp(r.z) } * .25;
+                        r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, Xi.data()) * (1.0 / samps);
+                    }
+
+                    c[i] = c[i] + Vec{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
                     r = Vec{ 0, 0, 0 };
                 }
             }
@@ -307,7 +312,7 @@ auto main(int argc, char* argv[]) -> int
     std::ofstream g{ "image.ppm" };
     g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
 
-    for(int i = 0; i < w * h; ++i) {
+    for(std::size_t i = 0; i < w * h; ++i) {
         g << fmt::format("{} {} {} ", toInt(c[i].x), toInt(c[i].y), toInt(c[i].z));
     }
 }
