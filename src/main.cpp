@@ -247,7 +247,7 @@ std::array<Sphere, 10> spheres = { {
         return obj.e + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
     }
     case REFR: {
-        constexpr double refraction_index = 1.5;
+        constexpr double refraction_index = 2.0;
         double const refraction_ratio = (n.dot(nl) > 0) ? (1.0 / refraction_index) : refraction_index;
         auto ray_in = r;
         auto const unit_direction = ray_in.d.norm();
