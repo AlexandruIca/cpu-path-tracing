@@ -122,17 +122,17 @@ std::array<Sphere, 10> spheres = { {
     // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
 } };
 
-inline double clamp(double x)
+[[nodiscard]] auto clamp(double const x) noexcept -> double
 {
     return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
-inline int toInt(double x)
+[[nodiscard]] auto toInt(double const x) noexcept -> int
 {
     return int(pow(clamp(x), 1 / 2.2) * 255 + .5);
 }
 
-inline bool intersect(const Ray& r, double& t, int& id)
+[[nodiscard]] auto intersect(const Ray& r, double& t, int& id) noexcept -> double
 {
     double n = sizeof(spheres) / sizeof(Sphere), d, inf = t = 1e20;
 
@@ -146,7 +146,7 @@ inline bool intersect(const Ray& r, double& t, int& id)
     return t < inf;
 }
 
-Vec radiance(const Ray& r, int depth, unsigned short* Xi)
+[[nodiscard]] auto radiance(const Ray& r, int depth, unsigned short* Xi) -> Vec
 {
     double t;   // distance to intersection
     int id = 0; // id of intersected object
