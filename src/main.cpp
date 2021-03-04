@@ -288,7 +288,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
     }
     case reflection_type::dielectric: {
         constexpr double refraction_index = 2.0;
-        double const refraction_ratio = (outward_normal.dot(normal) > 0) ? (1.0 / refraction_index) : refraction_index;
+        double const refraction_ratio = front_facing ? (1.0 / refraction_index) : refraction_index;
         auto ray_in = r;
         auto const unit_direction = ray_in.direction.norm();
 
