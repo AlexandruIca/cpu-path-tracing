@@ -1,5 +1,4 @@
 [requires]
-glm/0.9.9.8
 fmt/7.1.3
 cpp-taskflow/2.4.0
 

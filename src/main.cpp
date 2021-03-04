@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <fmt/format.h>
-#include <glm/glm.hpp>
 #include <taskflow/taskflow.hpp>
 
 #include "random_state.hpp"
