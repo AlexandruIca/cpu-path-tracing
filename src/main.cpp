@@ -174,6 +174,29 @@ std::array<Sphere, 10> spheres = { {
     return static_cast<double>(t < inf);
 }
 
+[[nodiscard]] auto diffuse_ray(Vec const& hit_point, Vec const& normal, pt::rand_state& rng) -> Ray
+{
+    double const r1 = 2 * pi * rng.generate(); // phi
+    double const r2 = rng.generate();          // 1 - cos^2 theta
+    double const r2s = sqrt(r2);               // sin_theta
+
+    Vec const w = normal;
+    Vec const u = (fabs(w.x) > 0.1 ? Vec{ 0, 1, 0 } : Vec{ 1, 0, 0 }).cross(w).norm();
+    Vec const v = w.cross(u);
+    Vec const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
+
+    return Ray{ hit_point, d };
+    // double const r1 = erand48(Xi);
+    // double const r2 = erand48(Xi);
+    // double const sin_phi = sqrt(r1); // r1 == 1 - cos^2(phi)
+    // double const cos_phi = sqrt(std::max(0.0, 1 - r1));
+    // double const theta = 2 * 3.14159265 * r2;
+
+    // auto const new_direction = Vec{ sin_phi * cos(theta), sin_phi * sin(theta), cos_phi };
+
+    // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
+}
+
 [[nodiscard]] auto radiance(const Ray& r, int const depth, pt::rand_state& rng) -> Vec
 {
     double t = 0.0;     // distance to intersection
@@ -201,26 +224,8 @@ std::array<Sphere, 10> spheres = { {
         }
     }
 
-    if(obj.refl == DIFF) {                         // Ideal DIFFUSE reflection
-        double const r1 = 2 * pi * rng.generate(); // phi
-        double const r2 = rng.generate();          // 1 - cos^2 theta
-        double const r2s = sqrt(r2);               // sin_theta
-
-        Vec const w = nl;
-        Vec const u = (fabs(w.x) > 0.1 ? Vec{ 0, 1, 0 } : Vec{ 1, 0, 0 }).cross(w).norm();
-        Vec const v = w.cross(u);
-        Vec const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
-
-        return obj.e + f.mult(radiance(Ray{ x, d }, depth + 1, rng));
-        // double const r1 = erand48(Xi);
-        // double const r2 = erand48(Xi);
-        // double const sin_phi = sqrt(r1); // r1 == 1 - cos^2(phi)
-        // double const cos_phi = sqrt(std::max(0.0, 1 - r1));
-        // double const theta = 2 * 3.14159265 * r2;
-
-        // auto const new_direction = Vec{ sin_phi * cos(theta), sin_phi * sin(theta), cos_phi };
-
-        // return obj.e + f.mult(radiance(Ray(x, new_direction), depth, Xi));
+    if(obj.refl == DIFF) { // Ideal DIFFUSE reflection
+        return obj.e + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
     }
     if(obj.refl == SPEC) { // Ideal SPECULAR reflection
         return obj.e + f.mult(radiance(Ray{ x, r.d - n * 2 * n.dot(r.d) }, depth + 1, rng));
