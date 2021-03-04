@@ -254,23 +254,25 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 {
     constexpr int russian_roulette_threshold = 4;
     double closest_distance = 0.0;
-    std::size_t id = 0;
+    std::size_t object_index = 0;
 
-    if(intersect(r, closest_distance, id) <= epsilon) {
+    if(intersect(r, closest_distance, object_index) <= epsilon) {
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
-    const sphere_t& obj = spheres.at(id);
-    vec3 const x = r.at(closest_distance); // r.origin + r.direction * closest_distance;
-    vec3 const n = (x - obj.position).norm();
-    vec3 const nl = n.dot(r.direction) < 0 ? n : n * -1;
-    vec3 f = obj.color;
+    const sphere_t& obj = spheres.at(object_index);
+    vec3 const hit_point = r.at(closest_distance);
+    vec3 const outward_normal = (hit_point - obj.position).norm();
+    bool const front_facing = outward_normal.dot(r.direction) < 0;
+    // front facing normal:
+    vec3 const normal = front_facing ? outward_normal : outward_normal * -1;
+    vec3 color = obj.color;
 
-    double const p = std::max({ f.x, f.y, f.z });
+    double const probability = std::max({ color.x, color.y, color.z });
 
     if(depth > russian_roulette_threshold) {
-        if(rng.generate() < p) {
-            f = f * (1.0 / p);
+        if(rng.generate() < probability) {
+            color = color * (1.0 / probability);
         }
         else {
             return obj.emission;
@@ -279,18 +281,18 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
     switch(obj.reflection) {
     case reflection_type::diffuse: {
-        return obj.emission + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
+        return obj.emission + color.mult(radiance(diffuse_ray(hit_point, normal, rng), depth + 1, rng));
     }
     case reflection_type::specular: {
-        return obj.emission + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
+        return obj.emission + color.mult(radiance(specular_ray(r, hit_point, outward_normal), depth + 1, rng));
     }
     case reflection_type::dielectric: {
         constexpr double refraction_index = 2.0;
-        double const refraction_ratio = (n.dot(nl) > 0) ? (1.0 / refraction_index) : refraction_index;
+        double const refraction_ratio = (outward_normal.dot(normal) > 0) ? (1.0 / refraction_index) : refraction_index;
         auto ray_in = r;
         auto const unit_direction = ray_in.direction.norm();
 
-        double const cos_theta = std::min((unit_direction * -1.0).dot(nl), 1.0);
+        double const cos_theta = std::min((unit_direction * -1.0).dot(normal), 1.0);
         double const sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
         bool cannot_refract = refraction_ratio * sin_theta > 1.0;
@@ -304,13 +306,13 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         };
 
         if(cannot_refract || reflectance(cos_theta, refraction_ratio) > rng.generate()) {
-            refl = specular_ray(r, x, n);
+            refl = specular_ray(r, hit_point, outward_normal);
         }
         else {
-            refl = dielectric_ray(x, unit_direction, nl, refraction_ratio);
+            refl = dielectric_ray(hit_point, unit_direction, normal, refraction_ratio);
         }
 
-        return obj.emission + f.mult(radiance(refl, depth + 1, rng));
+        return obj.emission + color.mult(radiance(refl, depth + 1, rng));
     }
     }
 
