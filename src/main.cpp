@@ -173,7 +173,7 @@ std::array<Sphere, 10> spheres = { {
     return static_cast<double>(t < inf);
 }
 
-[[nodiscard]] auto radiance(const Ray& r, int const depth, unsigned short* Xi) -> Vec
+[[nodiscard]] auto radiance(const Ray& r, int const depth, pt::rand_state& Xi) -> Vec
 {
     double t = 0.0;     // distance to intersection
     std::size_t id = 0; // id of intersected object
@@ -192,7 +192,7 @@ std::array<Sphere, 10> spheres = { {
 
     if(depth > 4) {
         // Russina Roulette
-        if(erand48(Xi) < p) {
+        if(Xi.generate() < p) {
             f = f * (1.0 / p);
         }
         else {
@@ -200,10 +200,10 @@ std::array<Sphere, 10> spheres = { {
         }
     }
 
-    if(obj.refl == DIFF) {                        // Ideal DIFFUSE reflection
-        double const r1 = 2 * M_PI * erand48(Xi); // phi
-        double const r2 = erand48(Xi);            // 1 - cos^2 theta
-        double const r2s = sqrt(r2);              // sin_theta
+    if(obj.refl == DIFF) {                          // Ideal DIFFUSE reflection
+        double const r1 = 2 * M_PI * Xi.generate(); // phi
+        double const r2 = Xi.generate();            // 1 - cos^2 theta
+        double const r2s = sqrt(r2);                // sin_theta
 
         Vec const w = nl;
         Vec const u = (fabs(w.x) > 0.1 ? Vec{ 0, 1, 0 } : Vec{ 1, 0, 0 }).cross(w).norm();
@@ -251,7 +251,7 @@ std::array<Sphere, 10> spheres = { {
 
     if(depth > 2) {
         // Russian Roulette
-        if(erand48(Xi) < P) {
+        if(Xi.generate() < P) {
             refr = radiance(Ray{ x, tdir }, depth + 1, Xi) * RP;
         }
         else {
@@ -283,8 +283,8 @@ auto main(int argc, char* argv[]) -> int
         std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
         auto const seed = static_cast<unsigned short>(y * y * y);
-        std::array<unsigned short, 3> Xi{ { 0, 0, seed } };
-        [[maybe_unused]] auto rng = pt::rand_state::default_with_seed(seed);
+        // std::array<unsigned short, 3> Xi{ { 0, 0, seed } };
+        auto Xi = pt::rand_state::default_with_seed(seed);
 
         for(unsigned short x = 0; x < w; x++) { // Loop cols
             auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
@@ -295,15 +295,15 @@ auto main(int argc, char* argv[]) -> int
                 for(int sx = 0; sx < 2; sx++) {
                     Vec r{ 0, 0, 0 };
                     for(int s = 0; s < samps; s++) {
-                        double const r1 = 2 * erand48(Xi.data());
-                        double const dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
-                        double const r2 = 2 * erand48(Xi.data());
-                        double const dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
+                        double const r1 = 2.0 * Xi.generate();
+                        double const dx = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+                        double const r2 = 2.0 * Xi.generate();
+                        double const dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 
                         Vec d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
                                 cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.d;
 
-                        r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, Xi.data()) * (1.0 / samps);
+                        r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, Xi) * (1.0 / samps);
                     }
 
                     c[i] = c[i] + Vec{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
