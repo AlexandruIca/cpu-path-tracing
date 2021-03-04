@@ -86,15 +86,15 @@ enum Refl_t
     DIFF,
     SPEC,
     REFR
-}; // material types, used in radiance()
+};
 
 struct Sphere
 {
-    double rad{ 0.0 }; // radius
+    double rad{ 0.0 };
     vec3 p{ 0, 0, 0 };
     vec3 e{ 0, 0, 0 };
-    vec3 c{ 0, 0, 0 };           // position, emission, color
-    Refl_t refl{ Refl_t::DIFF }; // reflection type (DIFFuse, SPECular, REFRactive)
+    vec3 c{ 0, 0, 0 };
+    Refl_t refl{ Refl_t::DIFF };
 
     ///
     /// \returns 0 if no intersection was found, something greater than 0 otherwise
@@ -215,14 +215,14 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
 [[nodiscard]] auto radiance(const Ray& r, int const depth, pt::rand_state& rng) -> vec3
 {
-    double t = 0.0;     // distance to intersection
-    std::size_t id = 0; // id of intersected object
+    double t = 0.0;
+    std::size_t id = 0;
 
     if(intersect(r, t, id) <= epsilon) {
-        return vec3{ 0.0, 0.0, 0.0 }; // if miss, return black
+        return vec3{ 0.0, 0.0, 0.0 };
     }
 
-    const Sphere& obj = spheres.at(id); // the hit object
+    const Sphere& obj = spheres.at(id);
     vec3 const x = r.o + r.d * t;
     vec3 const n = (x - obj.p).norm();
     vec3 const nl = n.dot(r.d) < 0 ? n : n * -1;
@@ -282,9 +282,6 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
 auto main(int argc, char* argv[]) -> int
 {
-    // tf::Executor executor{};
-    // tf::Taskflow taskflow{};
-
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
@@ -306,7 +303,7 @@ auto main(int argc, char* argv[]) -> int
             auto const seed = static_cast<unsigned short>(y * y * y);
             auto rng = pt::rand_state::default_with_seed(seed);
 
-            for(unsigned short x = 0; x < w; x++) { // Loop cols
+            for(unsigned short x = 0; x < w; x++) {
                 auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
 
                 // 2x2 subpixel rows
