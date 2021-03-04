@@ -182,7 +182,7 @@ std::array<sphere_t, 10> spheres = { {
     return std::clamp(x, 0.0, 1.0);
 }
 
-[[nodiscard]] auto toInt(double const x) noexcept -> int
+[[nodiscard]] auto color_to_int(double const x) noexcept -> int
 {
     // gamma 2.2 correction
     double const corrected = std::pow(clamp(x), 1.0 / 2.2);
@@ -216,9 +216,9 @@ std::array<sphere_t, 10> spheres = { {
     vec3 const w = normal;
     vec3 const u = (fabs(w.x) > 0.1 ? vec3{ 0, 1, 0 } : vec3{ 1, 0, 0 }).cross(w).norm();
     vec3 const v = w.cross(u);
-    vec3 const d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
+    vec3 const new_direction = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
 
-    return ray{ hit_point, d };
+    return ray{ hit_point, new_direction };
     // double const r1 = erand48(Xi);
     // double const r2 = erand48(Xi);
     // double const sin_phi = sqrt(r1); // r1 == 1 - cos^2(phi)
@@ -368,6 +368,6 @@ auto main(int argc, char* argv[]) -> int
     g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
 
     for(std::size_t i = 0; i < w * h; ++i) {
-        g << fmt::format("{} {} {} ", toInt(c[i].x), toInt(c[i].y), toInt(c[i].z));
+        g << fmt::format("{} {} {} ", color_to_int(c[i].x), color_to_int(c[i].y), color_to_int(c[i].z));
     }
 }
