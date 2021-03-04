@@ -12,6 +12,8 @@
 #include <fmt/format.h>
 #include <glm/glm.hpp>
 
+#include "random_state.hpp"
+
 constexpr double epsilon = 1e-4;
 
 struct Vec
@@ -268,10 +270,10 @@ auto main(int argc, char* argv[]) -> int
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
-    int const samps = argc == 2 ? std::stoi(args[1]) / 4 : 1; // # samples
+    int const samps = argc == 2 ? std::stoi(args[0]) / 4 : 1; // # samples
 
     Ray cam{ Vec{ 50, 52, 295.6 }, Vec{ 0, -0.042612, -1 }.norm() }; // cam pos, dir
-    Vec const cx = Vec{ w * .5135 / h, 0, 0 };
+    Vec const cx = Vec{ w * 0.5135 / h, 0, 0 };
     Vec const cy = cx.cross(cam.d).norm() * 0.5135;
     std::vector<Vec> c{};
     c.reserve(w * h);
@@ -280,7 +282,9 @@ auto main(int argc, char* argv[]) -> int
     for(int y = 0; y < h; y++) {
         std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
-        std::array<unsigned short, 3> Xi{ { 0, 0, static_cast<unsigned short>(y * y * y) } };
+        auto const seed = static_cast<unsigned short>(y * y * y);
+        std::array<unsigned short, 3> Xi{ { 0, 0, seed } };
+        [[maybe_unused]] auto rng = pt::rand_state::default_with_seed(seed);
 
         for(unsigned short x = 0; x < w; x++) { // Loop cols
             auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
