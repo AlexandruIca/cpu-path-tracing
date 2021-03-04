@@ -129,7 +129,9 @@ std::array<Sphere, 10> spheres = { {
 
 [[nodiscard]] auto toInt(double const x) noexcept -> int
 {
-    return int(pow(clamp(x), 1 / 2.2) * 255 + .5);
+    // gamma 2.2 correction
+    double const corrected = std::pow(clamp(x), 1.0 / 2.2);
+    return static_cast<int>(std::round(corrected * 255.0));
 }
 
 [[nodiscard]] auto intersect(const Ray& r, double& t, int& id) noexcept -> double
