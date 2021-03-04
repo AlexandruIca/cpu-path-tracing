@@ -24,9 +24,6 @@ set_project_warnings(project_warnings)
 include(cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
-include(cmake/OpenMP.cmake)
-enable_openmp(project_options)
-
 include(cmake/Doxygen.cmake)
 enable_doxygen()
 
@@ -51,6 +48,7 @@ set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
 
 find_package(glm REQUIRED)
 find_package(fmt REQUIRED)
+find_package(cpp-taskflow REQUIRED)
 
 add_subdirectory(src)
 

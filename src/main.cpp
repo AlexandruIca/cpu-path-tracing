@@ -11,6 +11,7 @@
 
 #include <fmt/format.h>
 #include <glm/glm.hpp>
+#include <taskflow/taskflow.hpp>
 
 #include "random_state.hpp"
 
@@ -281,6 +282,9 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
 auto main(int argc, char* argv[]) -> int
 {
+    // tf::Executor executor{};
+    // tf::Taskflow taskflow{};
+
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
@@ -292,38 +296,44 @@ auto main(int argc, char* argv[]) -> int
     std::vector<vec3> c{};
     c.reserve(w * h);
 
-#pragma omp parallel for schedule(dynamic, 1)
+    tf::Executor executor{};
+    tf::Taskflow taskflow{};
+
     for(int y = 0; y < h; y++) {
-        std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
+        taskflow.emplace([&c, y, samps, cam, cx, cy] {
+            std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
-        auto const seed = static_cast<unsigned short>(y * y * y);
-        auto rng = pt::rand_state::default_with_seed(seed);
+            auto const seed = static_cast<unsigned short>(y * y * y);
+            auto rng = pt::rand_state::default_with_seed(seed);
 
-        for(unsigned short x = 0; x < w; x++) { // Loop cols
-            auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
+            for(unsigned short x = 0; x < w; x++) { // Loop cols
+                auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
 
-            // 2x2 subpixel rows
-            for(int sy = 0; sy < 2; sy++) {
-                // 2x2 subpixel cols
-                for(int sx = 0; sx < 2; sx++) {
-                    vec3 r{ 0, 0, 0 };
-                    for(int s = 0; s < samps; s++) {
-                        double const r1 = 2.0 * rng.generate();
-                        double const dx = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-                        double const r2 = 2.0 * rng.generate();
-                        double const dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+                // 2x2 subpixel rows
+                for(int sy = 0; sy < 2; sy++) {
+                    // 2x2 subpixel cols
+                    for(int sx = 0; sx < 2; sx++) {
+                        vec3 r{ 0, 0, 0 };
+                        for(int s = 0; s < samps; s++) {
+                            double const r1 = 2.0 * rng.generate();
+                            double const dx = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+                            double const r2 = 2.0 * rng.generate();
+                            double const dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 
-                        vec3 d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
-                                 cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.d;
+                            vec3 d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
+                                     cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.d;
 
-                        r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
+                            r = r + radiance(Ray{ cam.o + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
+                        }
+
+                        c[i] = c[i] + vec3{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
                     }
-
-                    c[i] = c[i] + vec3{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
                 }
             }
-        }
+        });
     }
+
+    executor.run(taskflow).wait();
 
     std::ofstream g{ "image.ppm" };
     g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
