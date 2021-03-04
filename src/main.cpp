@@ -240,15 +240,25 @@ std::array<Sphere, 10> spheres = { {
     double const c = 1 - (into ? -ddn : tdir.dot(n));
     double const Re = R0 + (1 - R0) * c * c * c * c * c;
     double const Tr = 1 - Re;
-    double const P = .25 + .5 * Re;
+    double const P = 0.25 + 0.5 * Re;
     double const RP = Re / P;
     double const TP = Tr / (1 - P);
+    Vec refr{ 0, 0, 0 };
 
-    return obj.e + f.mult(depth > 2
-                              ? (erand48(Xi) < P ? // Russian roulette
-                                     radiance(reflRay, depth + 1, Xi) * RP
-                                                 : radiance(Ray{ x, tdir }, depth + 1, Xi) * TP)
-                              : radiance(reflRay, depth + 1, Xi) * Re + radiance(Ray{ x, tdir }, depth + 1, Xi) * Tr);
+    if(depth > 2) {
+        // Russian Roulette
+        if(erand48(Xi) < P) {
+            refr = radiance(Ray{ x, tdir }, depth + 1, Xi) * RP;
+        }
+        else {
+            refr = radiance(Ray{ x, tdir }, depth + 1, Xi) * TP;
+        }
+    }
+    else {
+        refr = radiance(reflRay, depth + 1, Xi) * Re + radiance(Ray{ x, tdir }, depth + 1, Xi) * Tr;
+    }
+
+    return obj.e + f.mult(refr);
 }
 
 auto main(int argc, char* argv[]) -> int
