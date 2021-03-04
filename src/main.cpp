@@ -87,23 +87,23 @@ enum class reflection_type
     dielectric
 };
 
-struct Sphere
+struct sphere_t
 {
-    double rad{ 0.0 };
-    vec3 p{ 0, 0, 0 };
-    vec3 e{ 0, 0, 0 };
-    vec3 c{ 0, 0, 0 };
-    reflection_type refl{ reflection_type::diffuse };
+    double radius{ 0.0 };
+    vec3 position{ 0, 0, 0 };
+    vec3 emission{ 0, 0, 0 };
+    vec3 color{ 0, 0, 0 };
+    reflection_type reflection{ reflection_type::diffuse };
 
     ///
     /// \returns 0 if no intersection was found, something greater than 0 otherwise
     ///
     [[nodiscard]] auto intersect(const ray& r) const noexcept -> double
     {
-        vec3 op = p - r.origin;
+        vec3 op = position - r.origin;
         double t = 0.0;
         double const b = op.dot(r.direction);
-        double det = b * b - op.dot(op) + rad * rad;
+        double det = b * b - op.dot(op) + radius * radius;
 
         if(det < 0) {
             return 0;
@@ -126,53 +126,52 @@ struct Sphere
     }
 };
 
-std::array<Sphere, 10> spheres = { {
+std::array<sphere_t, 10> spheres = { {
     // Scene: radius, position, emission, color, material
-    Sphere{ 1e5,
-            vec3{ 1e5 + 1, 40.8, 81.6 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 0.75, 0.25, 0.25 },
-            reflection_type::diffuse }, // Left
-    Sphere{ 1e5,
-            vec3{ -1e5 + 99, 40.8, 81.6 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 0.25, 0.25, 0.75 },
-            reflection_type::diffuse }, // Right
-    Sphere{
+    sphere_t{ 1e5,
+              vec3{ 1e5 + 1, 40.8, 81.6 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 0.75, 0.25, 0.25 },
+              reflection_type::diffuse }, // Left
+    sphere_t{ 1e5,
+              vec3{ -1e5 + 99, 40.8, 81.6 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 0.25, 0.25, 0.75 },
+              reflection_type::diffuse }, // Right
+    sphere_t{
         1e5, vec3{ 50, 40.8, 1e5 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.75, 0.75, 0.75 }, reflection_type::diffuse }, // Back
-    Sphere{ 1e5,
-            vec3{ 50, 40.8, -1e5 + 170 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 0.0, 0.0, 0.0 },
-            reflection_type::diffuse }, // Front
-    Sphere{ 1e5,
-            vec3{ 50, 1e5, 81.6 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 0.75, 0.75, 0.75 },
-            reflection_type::diffuse }, // Bottom
-    Sphere{ 1e5,
-            vec3{ 50, -1e5 + 81.6, 81.6 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 0.25, 0.75, 0.15 },
-            reflection_type::diffuse }, // Top
-    Sphere{ 16.5,
-            vec3{ 27, 16.5, 47 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 1, 1, 1 } * 0.999,
-            reflection_type::specular }, // Mirror
-    Sphere{ 16.5,
-            vec3{ 65, 16.5, 37 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 0.6, 0.1, 0.6 },
-            reflection_type::specular }, // Mirror Purple
-    Sphere{
+    sphere_t{ 1e5,
+              vec3{ 50, 40.8, -1e5 + 170 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 0.0, 0.0, 0.0 },
+              reflection_type::diffuse }, // Front
+    sphere_t{ 1e5,
+              vec3{ 50, 1e5, 81.6 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 0.75, 0.75, 0.75 },
+              reflection_type::diffuse }, // Bottom
+    sphere_t{ 1e5,
+              vec3{ 50, -1e5 + 81.6, 81.6 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 0.25, 0.75, 0.15 },
+              reflection_type::diffuse }, // Top
+    sphere_t{ 16.5,
+              vec3{ 27, 16.5, 47 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 1, 1, 1 } * 0.999,
+              reflection_type::specular }, // Mirror
+    sphere_t{ 16.5,
+              vec3{ 65, 16.5, 37 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 0.6, 0.1, 0.6 },
+              reflection_type::specular }, // Mirror Purple
+    sphere_t{
         16.5, vec3{ 45, 46.5, 50 }, vec3{ 22, 22, 22 }, vec3{ 0.0, 0.0, 0.0 }, reflection_type::diffuse }, // Light up
-    Sphere{ 16.5,
-            vec3{ 73, 16.5, 78 },
-            vec3{ 0.0, 0.0, 0.0 },
-            vec3{ 1, 1, 1 } * 0.999,
-            reflection_type::dielectric }, // Glass
-    // Sphere(600, Vec(50, 681.6, 0.27, 81.6), Vec(6, 6, 6), Vec(0.2, 0.2, 0.5), DIFF) // Light
+    sphere_t{ 16.5,
+              vec3{ 73, 16.5, 78 },
+              vec3{ 0.0, 0.0, 0.0 },
+              vec3{ 1, 1, 1 } * 0.999,
+              reflection_type::dielectric }, // Glass
 } };
 
 ///
@@ -255,11 +254,11 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
-    const Sphere& obj = spheres.at(id);
+    const sphere_t& obj = spheres.at(id);
     vec3 const x = r.origin + r.direction * t;
-    vec3 const n = (x - obj.p).norm();
+    vec3 const n = (x - obj.position).norm();
     vec3 const nl = n.dot(r.direction) < 0 ? n : n * -1;
-    vec3 f = obj.c;
+    vec3 f = obj.color;
 
     double const p = std::max({ f.x, f.y, f.z });
 
@@ -269,16 +268,16 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
             f = f * (1.0 / p);
         }
         else {
-            return obj.e;
+            return obj.emission;
         }
     }
 
-    switch(obj.refl) {
+    switch(obj.reflection) {
     case reflection_type::diffuse: {
-        return obj.e + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
+        return obj.emission + f.mult(radiance(diffuse_ray(x, nl, rng), depth + 1, rng));
     }
     case reflection_type::specular: {
-        return obj.e + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
+        return obj.emission + f.mult(radiance(specular_ray(r, x, n), depth + 1, rng));
     }
     case reflection_type::dielectric: {
         constexpr double refraction_index = 2.0;
@@ -306,7 +305,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
             refl = dielectric_ray(x, unit_direction, nl, refraction_ratio);
         }
 
-        return obj.e + f.mult(radiance(refl, depth + 1, rng));
+        return obj.emission + f.mult(radiance(refl, depth + 1, rng));
     }
     }
 
