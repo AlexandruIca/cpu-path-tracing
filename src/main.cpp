@@ -14,65 +14,12 @@
 
 #include "random_state.hpp"
 
+#include "vec.hpp"
+
 constexpr double epsilon = 1e-4;
 constexpr double pi = 3.14159265358979323846;
 
-struct vec3
-{
-    double x{ 0.0 };
-    double y{ 0.0 };
-    double z{ 0.0 };
-
-    vec3() noexcept = delete;
-    vec3(vec3 const&) noexcept = default;
-    vec3(vec3&&) noexcept = default;
-    ~vec3() noexcept = default;
-
-    vec3(double x_, double y_, double z_) noexcept
-        : x{ x_ }
-        , y{ y_ }
-        , z{ z_ }
-    {
-    }
-
-    auto operator=(vec3 const&) noexcept -> vec3& = default;
-    auto operator=(vec3&&) noexcept -> vec3& = default;
-
-    [[nodiscard]] auto operator+(const vec3& b) const noexcept -> vec3
-    {
-        return vec3{ x + b.x, y + b.y, z + b.z };
-    }
-
-    [[nodiscard]] auto operator-(const vec3& b) const noexcept -> vec3
-    {
-        return vec3{ x - b.x, y - b.y, z - b.z };
-    }
-
-    [[nodiscard]] auto operator*(double b) const noexcept -> vec3
-    {
-        return vec3{ x * b, y * b, z * b };
-    }
-
-    [[nodiscard]] auto blend(const vec3& b) const noexcept -> vec3
-    {
-        return vec3{ x * b.x, y * b.y, z * b.z };
-    }
-
-    [[nodiscard]] auto norm() noexcept -> vec3&
-    {
-        return *this = *this * (1 / std::sqrt(x * x + y * y + z * z));
-    }
-
-    [[nodiscard]] auto dot(const vec3& b) const noexcept -> double
-    {
-        return x * b.x + y * b.y + z * b.z;
-    }
-
-    [[nodiscard]] auto cross(vec3 const& b) const noexcept -> vec3
-    {
-        return vec3{ y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x };
-    }
-};
+using vec3 = pt::vec3;
 
 struct ray
 {
