@@ -12,15 +12,13 @@
 #include <fmt/format.h>
 #include <taskflow/taskflow.hpp>
 
+#include "constants.hpp"
 #include "random_state.hpp"
 #include "ray.hpp"
 #include "reflection.hpp"
 #include "sphere.hpp"
 #include "utils.hpp"
 #include "vec.hpp"
-
-constexpr double epsilon = 1e-4;
-constexpr double pi = 3.14159265358979323846;
 
 using vec3 = pt::vec3;
 using ray = pt::ray;
@@ -95,7 +93,7 @@ std::array<sphere_t, 10> spheres = { {
 
 [[nodiscard]] auto diffuse_ray(vec3 const& hit_point, [[maybe_unused]] vec3 const& normal, pt::rand_state& rng) -> ray
 {
-    double const phi = 2 * pi * rng.generate();
+    double const phi = 2 * pt::pi * rng.generate();
     double const random_angle = rng.generate(); // 1 - cos^2 theta
     double const sin_theta = std::sqrt(random_angle);
     double const cos_theta = std::sqrt(1.0 - random_angle);
@@ -129,7 +127,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
     double closest_distance = 0.0;
     std::size_t object_index = 0;
 
-    if(intersect(r, closest_distance, object_index) <= epsilon) {
+    if(intersect(r, closest_distance, object_index) <= pt::epsilon) {
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
