@@ -13,23 +13,14 @@
 #include <taskflow/taskflow.hpp>
 
 #include "random_state.hpp"
+#include "ray.hpp"
 #include "vec.hpp"
 
 constexpr double epsilon = 1e-4;
 constexpr double pi = 3.14159265358979323846;
 
 using vec3 = pt::vec3;
-
-struct ray
-{
-    vec3 origin{ 0, 0, 0 };
-    vec3 direction{ 0, 0, 0 };
-
-    [[nodiscard]] auto at(double const t) const noexcept -> vec3
-    {
-        return origin + direction * t;
-    }
-};
+using ray = pt::ray;
 
 enum class reflection_type
 {
