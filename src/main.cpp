@@ -152,14 +152,14 @@ auto main(int argc, char* argv[]) -> int
     ray cam{ vec3{ 50, 51, 295.6 }, vec3{ 0, -0.042612, -1 }.norm() };
     vec3 const cx = vec3{ w * 0.5135 / h, 0, 0 };
     vec3 const cy = cx.cross(cam.direction).norm() * 0.5135;
-    std::vector<vec3> c{};
-    c.reserve(w * h);
+    std::vector<vec3> image{};
+    image.reserve(w * h);
 
     tf::Executor executor{};
     tf::Taskflow taskflow{};
 
     for(int y = 0; y < h; y++) {
-        taskflow.emplace([&c, y, samps, cam, cx, cy] {
+        taskflow.emplace([&image, y, samps, cam, cx, cy] {
             std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
             auto const seed = static_cast<unsigned short>(y * y * y);
@@ -185,7 +185,7 @@ auto main(int argc, char* argv[]) -> int
                             r = r + radiance(ray{ cam.origin + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
                         }
 
-                        c[i] = c[i] + vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) } * 0.25;
+                        image[i] = image[i] + vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) } * 0.25;
                     }
                 }
             }
@@ -200,6 +200,7 @@ auto main(int argc, char* argv[]) -> int
     g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
 
     for(std::size_t i = 0; i < w * h; ++i) {
-        g << fmt::format("{} {} {} ", pt::color_to_int(c[i].x), pt::color_to_int(c[i].y), pt::color_to_int(c[i].z));
+        g << fmt::format(
+            "{} {} {} ", pt::color_to_int(image[i].x), pt::color_to_int(image[i].y), pt::color_to_int(image[i].z));
     }
 }
