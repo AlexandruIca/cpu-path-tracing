@@ -78,8 +78,7 @@ std::array<sphere_t, 10> spheres = { {
 ///
 [[nodiscard]] auto intersect(const ray& r, double& t, std::size_t& id) noexcept -> double
 {
-    constexpr double inf = 1e20;
-    t = inf;
+    t = pt::inf;
 
     for(std::size_t i = 0; i < spheres.size(); i++) {
         if(double const d = spheres.at(i).intersect(r); d > 0 && d < t) {
@@ -88,7 +87,7 @@ std::array<sphere_t, 10> spheres = { {
         }
     }
 
-    return static_cast<double>(t < inf);
+    return static_cast<double>(t < pt::inf);
 }
 
 [[nodiscard]] auto diffuse_ray(vec3 const& hit_point, [[maybe_unused]] vec3 const& normal, pt::rand_state& rng) -> ray
