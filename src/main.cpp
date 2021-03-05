@@ -14,6 +14,7 @@
 
 #include "random_state.hpp"
 #include "ray.hpp"
+#include "reflection.hpp"
 #include "vec.hpp"
 
 constexpr double epsilon = 1e-4;
@@ -21,13 +22,7 @@ constexpr double pi = 3.14159265358979323846;
 
 using vec3 = pt::vec3;
 using ray = pt::ray;
-
-enum class reflection_type
-{
-    diffuse,
-    specular,
-    dielectric
-};
+using reflection_type = pt::reflection_type;
 
 struct sphere_t
 {
