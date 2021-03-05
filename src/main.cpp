@@ -16,6 +16,7 @@
 #include "ray.hpp"
 #include "reflection.hpp"
 #include "sphere.hpp"
+#include "utils.hpp"
 #include "vec.hpp"
 
 constexpr double epsilon = 1e-4;
@@ -73,21 +74,6 @@ std::array<sphere_t, 10> spheres = { {
               vec3{ 1, 1, 1 } * 0.999,
               reflection_type::dielectric }, // Glass
 } };
-
-///
-/// \brief Clamps x to (0.0, 1.0).
-///
-[[nodiscard]] auto clamp(double const x) noexcept -> double
-{
-    return std::clamp(x, 0.0, 1.0);
-}
-
-[[nodiscard]] auto color_to_int(double const x) noexcept -> int
-{
-    // gamma 2.2 correction
-    double const corrected = std::pow(clamp(x), 1.0 / 2.2);
-    return static_cast<int>(std::round(corrected * 255.0));
-}
 
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
@@ -249,7 +235,7 @@ auto main(int argc, char* argv[]) -> int
                             r = r + radiance(ray{ cam.origin + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
                         }
 
-                        c[i] = c[i] + vec3{ clamp(r.x), clamp(r.y), clamp(r.z) } * 0.25;
+                        c[i] = c[i] + vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) } * 0.25;
                     }
                 }
             }
@@ -264,6 +250,6 @@ auto main(int argc, char* argv[]) -> int
     g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
 
     for(std::size_t i = 0; i < w * h; ++i) {
-        g << fmt::format("{} {} {} ", color_to_int(c[i].x), color_to_int(c[i].y), color_to_int(c[i].z));
+        g << fmt::format("{} {} {} ", pt::color_to_int(c[i].x), pt::color_to_int(c[i].y), pt::color_to_int(c[i].z));
     }
 }
