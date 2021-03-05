@@ -57,9 +57,12 @@ using sphere_t = pt::sphere;
     return ray{ hit_point, new_direction };
 }
 
-[[nodiscard]] auto specular_ray(ray const& original, vec3 const& hit_point, vec3 const& outward_normal) -> ray
+[[nodiscard]] auto
+specular_ray(ray const& original, vec3 const& hit_point, vec3 const& outward_normal, pt::rand_state& rng) -> ray
 {
-    return ray{ hit_point, original.direction - outward_normal * 2.0 * outward_normal.dot(original.direction) };
+    auto const reflected = original.direction - outward_normal * 2.0 * outward_normal.dot(original.direction);
+    auto const factor = rng.generate();
+    return ray{ hit_point, reflected + vec3{ factor, factor, factor } };
 }
 
 [[nodiscard]] auto
@@ -106,7 +109,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         return obj.emission + color.blend(radiance(diffuse_ray(hit_point, normal, rng), depth + 1, rng));
     }
     case reflection_type::specular: {
-        return obj.emission + color.blend(radiance(specular_ray(r, hit_point, outward_normal), depth + 1, rng));
+        return obj.emission + color.blend(radiance(specular_ray(r, hit_point, outward_normal, rng), depth + 1, rng));
     }
     case reflection_type::dielectric: {
         constexpr double refraction_index = 2.0;
@@ -128,7 +131,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         };
 
         if(cannot_refract || reflectance(cos_theta, refraction_ratio) > rng.generate()) {
-            refl = specular_ray(r, hit_point, outward_normal);
+            refl = specular_ray(r, hit_point, outward_normal, rng);
         }
         else {
             refl = dielectric_ray(hit_point, unit_direction, normal, refraction_ratio);
