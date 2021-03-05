@@ -15,6 +15,7 @@
 #include "random_state.hpp"
 #include "ray.hpp"
 #include "reflection.hpp"
+#include "sphere.hpp"
 #include "vec.hpp"
 
 constexpr double epsilon = 1e-4;
@@ -23,45 +24,7 @@ constexpr double pi = 3.14159265358979323846;
 using vec3 = pt::vec3;
 using ray = pt::ray;
 using reflection_type = pt::reflection_type;
-
-struct sphere_t
-{
-    double radius{ 0.0 };
-    vec3 position{ 0, 0, 0 };
-    vec3 emission{ 0, 0, 0 };
-    vec3 color{ 0, 0, 0 };
-    reflection_type reflection{ reflection_type::diffuse };
-
-    ///
-    /// \returns 0 if no intersection was found, something greater than 0 otherwise
-    ///
-    [[nodiscard]] auto intersect(const ray& r) const noexcept -> double
-    {
-        vec3 op = position - r.origin;
-        double t = 0.0;
-        double const b = op.dot(r.direction);
-        double det = b * b - op.dot(op) + radius * radius;
-
-        if(det < 0) {
-            return 0;
-        }
-
-        det = std::sqrt(det);
-        t = b - det;
-
-        if(t > epsilon) {
-            return t;
-        }
-
-        t = b + det;
-
-        if(t > epsilon) {
-            return t;
-        }
-
-        return 0.0;
-    }
-};
+using sphere_t = pt::sphere;
 
 std::array<sphere_t, 10> spheres = { {
     // Scene: radius, position, emission, color, material
