@@ -1,12 +1,11 @@
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <cstddef>
-#include <cstdio>
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -29,7 +28,7 @@ using sphere_t = pt::sphere;
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
 ///
-[[nodiscard]] auto intersect(const ray& r, double& t, std::size_t& id) noexcept -> double
+[[nodiscard]] auto intersect(const ray& r, double& t, std::size_t& id) noexcept -> bool
 {
     t = pt::inf;
 
@@ -40,7 +39,7 @@ using sphere_t = pt::sphere;
         }
     }
 
-    return static_cast<double>(t < pt::inf);
+    return t < pt::inf;
 }
 
 [[nodiscard]] auto diffuse_ray(vec3 const& hit_point, [[maybe_unused]] vec3 const& normal, pt::rand_state& rng) -> ray
@@ -79,7 +78,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
     double closest_distance = 0.0;
     std::size_t object_index = 0;
 
-    if(intersect(r, closest_distance, object_index) <= pt::epsilon) {
+    if(!intersect(r, closest_distance, object_index)) {
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
