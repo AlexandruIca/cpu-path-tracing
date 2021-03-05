@@ -150,8 +150,14 @@ auto main(int argc, char* argv[]) -> int
     int const samps = argc == 2 ? std::stoi(args[0]) / 4 : 1;
 
     ray cam{ vec3{ 50, 51, 295.6 }, vec3{ 0, -0.042612, -1 }.norm() };
-    vec3 const cx = vec3{ w * 0.5135 / h, 0, 0 };
-    vec3 const cy = cx.cross(cam.direction).norm() * 0.5135;
+
+    constexpr double aspect_ratio = (w * 1.0) / (h * 1.0);
+    constexpr double vertical_fov = 0.502643; // approx. 28 degrees
+    double const fov_scale = 2.0 * std::tan(0.5 * vertical_fov);
+
+    vec3 const cam_x_axis = vec3{ aspect_ratio, 0, 0 } * fov_scale;
+    // cam_y_axis is orghogonal to both x and forward axis
+    vec3 const cam_y_axis = cam_x_axis.cross(cam.direction).norm() * fov_scale;
     std::vector<vec3> image{};
     image.reserve(w * h);
 
@@ -159,7 +165,7 @@ auto main(int argc, char* argv[]) -> int
     tf::Taskflow taskflow{};
 
     for(int y = 0; y < h; y++) {
-        taskflow.emplace([&image, y, samps, cam, cx, cy] {
+        taskflow.emplace([&image, y, samps, cam, cam_x_axis, cam_y_axis] {
             std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
 
             auto const seed = static_cast<unsigned short>(y * y * y);
@@ -179,8 +185,8 @@ auto main(int argc, char* argv[]) -> int
                             double const r2 = 2.0 * rng.generate();
                             double const dy = r2 < 1.0 ? std::sqrt(r2) - 1.0 : 1.0 - std::sqrt(2.0 - r2);
 
-                            vec3 d = cx * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
-                                     cy * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.direction;
+                            vec3 d = cam_x_axis * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
+                                     cam_y_axis * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.direction;
 
                             r = r + radiance(ray{ cam.origin + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
                         }
