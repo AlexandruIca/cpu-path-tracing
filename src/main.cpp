@@ -16,6 +16,7 @@
 #include "random_state.hpp"
 #include "ray.hpp"
 #include "reflection.hpp"
+#include "smallpt_scene.hpp"
 #include "sphere.hpp"
 #include "utils.hpp"
 #include "vec.hpp"
@@ -25,54 +26,6 @@ using ray = pt::ray;
 using reflection_type = pt::reflection_type;
 using sphere_t = pt::sphere;
 
-std::array<sphere_t, 10> spheres = { {
-    // Scene: radius, position, emission, color, material
-    sphere_t{ 1e5,
-              vec3{ 1e5 + 1, 40.8, 81.6 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 0.75, 0.25, 0.25 },
-              reflection_type::diffuse }, // Left
-    sphere_t{ 1e5,
-              vec3{ -1e5 + 99, 40.8, 81.6 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 0.25, 0.25, 0.75 },
-              reflection_type::diffuse }, // Right
-    sphere_t{
-        1e5, vec3{ 50, 40.8, 1e5 }, vec3{ 0.0, 0.0, 0.0 }, vec3{ 0.75, 0.75, 0.75 }, reflection_type::diffuse }, // Back
-    sphere_t{ 1e5,
-              vec3{ 50, 40.8, -1e5 + 170 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 0.0, 0.0, 0.0 },
-              reflection_type::diffuse }, // Front
-    sphere_t{ 1e5,
-              vec3{ 50, 1e5, 81.6 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 0.75, 0.75, 0.75 },
-              reflection_type::diffuse }, // Bottom
-    sphere_t{ 1e5,
-              vec3{ 50, -1e5 + 81.6, 81.6 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 0.25, 0.75, 0.15 },
-              reflection_type::diffuse }, // Top
-    sphere_t{ 16.5,
-              vec3{ 27, 16.5, 47 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 1, 1, 1 } * 0.999,
-              reflection_type::specular }, // Mirror
-    sphere_t{ 16.5,
-              vec3{ 65, 16.5, 37 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 0.6, 0.1, 0.6 },
-              reflection_type::specular }, // Mirror Purple
-    sphere_t{
-        16.5, vec3{ 45, 46.5, 50 }, vec3{ 22, 22, 22 }, vec3{ 0.0, 0.0, 0.0 }, reflection_type::diffuse }, // Light up
-    sphere_t{ 16.5,
-              vec3{ 73, 16.5, 78 },
-              vec3{ 0.0, 0.0, 0.0 },
-              vec3{ 1, 1, 1 } * 0.999,
-              reflection_type::dielectric }, // Glass
-} };
-
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
 ///
@@ -80,8 +33,8 @@ std::array<sphere_t, 10> spheres = { {
 {
     t = pt::inf;
 
-    for(std::size_t i = 0; i < spheres.size(); i++) {
-        if(double const d = spheres.at(i).intersect(r); d > 0 && d < t) {
+    for(std::size_t i = 0; i < pt::spheres.size(); i++) {
+        if(double const d = pt::spheres.at(i).intersect(r); d > 0 && d < t) {
             t = d;
             id = i;
         }
@@ -130,7 +83,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
-    const sphere_t& obj = spheres.at(object_index);
+    const sphere_t& obj = pt::spheres.at(object_index);
     vec3 const hit_point = r.at(closest_distance);
     vec3 const outward_normal = (hit_point - obj.position).norm();
     bool const front_facing = outward_normal.dot(r.direction) < 0;
