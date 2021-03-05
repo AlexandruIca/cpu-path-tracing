@@ -51,8 +51,11 @@ inline std::array<sphere_t, 10> spheres = { {
               vec3{ 0.0, 0.0, 0.0 },
               vec3{ 0.6, 0.1, 0.6 },
               reflection_type::specular }, // Mirror Purple
-    sphere_t{
-        16.5, vec3{ 45, 46.5, 50 }, vec3{ 22, 22, 22 }, vec3{ 0.0, 0.0, 0.0 }, reflection_type::diffuse }, // Light up
+    sphere_t{ 16.5,
+              vec3{ 45, 46.5, 50 },
+              vec3{ 3.0, 3.0, 3.0 },
+              vec3{ 0.0, 0.0, 0.0 },
+              reflection_type::diffuse }, // Light up
     sphere_t{ 16.5,
               vec3{ 73, 16.5, 78 },
               vec3{ 0.0, 0.0, 0.0 },
