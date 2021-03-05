@@ -180,6 +180,7 @@ auto main(int argc, char* argv[]) -> int
                     for(int sx = 0; sx < 2; sx++) {
                         vec3 r{ 0, 0, 0 };
                         for(int s = 0; s < samps; s++) {
+                            /*
                             double const r1 = 2.0 * rng.generate();
                             double const dx = r1 < 1.0 ? std::sqrt(r1) - 1.0 : 1.0 - std::sqrt(2.0 - r1);
                             double const r2 = 2.0 * rng.generate();
@@ -189,6 +190,15 @@ auto main(int argc, char* argv[]) -> int
                                      cam_y_axis * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.direction;
 
                             r = r + radiance(ray{ cam.origin + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
+                            */
+                            // At what point on the x/y axis are we on? (-0.5 - 0.5)
+                            // Center of the pixel is at 0.0
+                            vec3 const offset_x = cam_x_axis * ((x + sx * 0.5 + 0.5 * rng.generate()) / w - 0.5);
+                            vec3 const offset_y = cam_y_axis * ((y + sy * 0.5 + 0.5 * rng.generate()) / h - 0.5);
+                            vec3 new_direction = cam.direction + offset_x + offset_y;
+
+                            r = r + radiance(ray{ cam.origin + new_direction * 140.0, new_direction.norm() }, 0, rng) *
+                                        (1.0 / samps);
                         }
 
                         image[i] = image[i] + vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) } * 0.25;
