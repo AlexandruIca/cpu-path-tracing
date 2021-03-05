@@ -144,10 +144,12 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
 auto main(int argc, char* argv[]) -> int
 {
+    // how many subpixels per row/column?
+    constexpr int num_subpixels = 2;
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
-    int const samps = argc == 2 ? std::stoi(args[0]) / 4 : 1;
+    int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
 
     ray cam{ vec3{ 50, 51, 295.6 }, vec3{ 0, -0.042612, -1 }.norm() };
 
@@ -159,14 +161,15 @@ auto main(int argc, char* argv[]) -> int
     // cam_y_axis is orghogonal to both x and forward axis
     vec3 const cam_y_axis = cam_x_axis.cross(cam.direction).norm() * fov_scale;
     std::vector<vec3> image{};
-    image.reserve(w * h);
+    image.resize(w * h, vec3{ 0, 0, 0 });
 
     tf::Executor executor{};
     tf::Taskflow taskflow{};
 
     for(int y = 0; y < h; y++) {
         taskflow.emplace([&image, y, samps, cam, cam_x_axis, cam_y_axis] {
-            std::cerr << fmt::format("\rRendering ({} spp) {:>5.2}%", samps * 4, 100.0 * y / (h - 1));
+            std::cerr << fmt::format(
+                "\rRendering ({} spp) {:>5.2}%", samps * num_subpixels * num_subpixels, 100.0 * y / (h - 1));
 
             auto const seed = static_cast<unsigned short>(y * y * y);
             auto rng = pt::rand_state::default_with_seed(seed);
@@ -174,34 +177,27 @@ auto main(int argc, char* argv[]) -> int
             for(unsigned short x = 0; x < w; x++) {
                 auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
 
-                // 2x2 subpixel rows
-                for(int sy = 0; sy < 2; sy++) {
-                    // 2x2 subpixel cols
-                    for(int sx = 0; sx < 2; sx++) {
+                for(int sy = 0; sy < num_subpixels; sy++) {
+                    for(int sx = 0; sx < num_subpixels; sx++) {
                         vec3 r{ 0, 0, 0 };
+
                         for(int s = 0; s < samps; s++) {
-                            /*
-                            double const r1 = 2.0 * rng.generate();
-                            double const dx = r1 < 1.0 ? std::sqrt(r1) - 1.0 : 1.0 - std::sqrt(2.0 - r1);
-                            double const r2 = 2.0 * rng.generate();
-                            double const dy = r2 < 1.0 ? std::sqrt(r2) - 1.0 : 1.0 - std::sqrt(2.0 - r2);
+                            constexpr double subpixel_length = 1.0 / num_subpixels;
+                            double const x_in_subpixel = (x + sx * subpixel_length + rng.generate() * subpixel_length);
+                            double const y_in_subpixel = (y + sy * subpixel_length + rng.generate() * subpixel_length);
 
-                            vec3 d = cam_x_axis * (((sx + 0.5 + dx) / 2 + x) / w - 0.5) +
-                                     cam_y_axis * (((sy + 0.5 + dy) / 2 + y) / h - 0.5) + cam.direction;
-
-                            r = r + radiance(ray{ cam.origin + d * 140, d.norm() }, 0, rng) * (1.0 / samps);
-                            */
-                            // At what point on the x/y axis are we on? (-0.5 - 0.5)
-                            // Center of the pixel is at 0.0
-                            vec3 const offset_x = cam_x_axis * ((x + sx * 0.5 + 0.5 * rng.generate()) / w - 0.5);
-                            vec3 const offset_y = cam_y_axis * ((y + sy * 0.5 + 0.5 * rng.generate()) / h - 0.5);
+                            // At what point on the x/y axis are we on? (between -0.5 and 0.5)
+                            vec3 const offset_x = cam_x_axis * (x_in_subpixel / w - 0.5);
+                            vec3 const offset_y = cam_y_axis * (y_in_subpixel / h - 0.5);
                             vec3 new_direction = cam.direction + offset_x + offset_y;
 
-                            r = r + radiance(ray{ cam.origin + new_direction * 140.0, new_direction.norm() }, 0, rng) *
-                                        (1.0 / samps);
+                            ray const new_ray{ cam.origin + new_direction * 140.0, new_direction.norm() };
+                            vec3 const contributor = radiance(new_ray, 0, rng);
+                            r = r + contributor * (1.0 / samps);
                         }
 
-                        image[i] = image[i] + vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) } * 0.25;
+                        vec3 const subpixel_color = vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) };
+                        image[i] = image[i] + subpixel_color * (1.0 / (num_subpixels * num_subpixels));
                     }
                 }
             }
