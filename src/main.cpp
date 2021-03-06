@@ -171,6 +171,8 @@ struct camera
     /// \param u The x coordinate between 0.0 and 1.0.
     /// \param v The y coordinate between 0.0 and 1.0.
     ///
+    /// Basically divide x by width and y by height before passing them here.
+    ///
     [[nodiscard]] auto get_ray(double const u, double const v) const noexcept -> ray
     {
         vec3 const offset_x = cam_x_axis * (u - 0.5);
