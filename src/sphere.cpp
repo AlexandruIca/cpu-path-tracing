@@ -5,27 +5,26 @@
 
 auto pt::sphere::intersect(ray const& r) const noexcept -> double
 {
-    vec3 op = position - r.origin;
-    double t = 0.0;
-    double const b = op.dot(r.direction);
-    double det = b * b - op.dot(op) + radius * radius;
+    vec3 const oc = r.origin - position;
+    auto const a = r.direction.dot(r.direction);
+    auto const half_b = oc.dot(r.direction);
+    auto const c = oc.dot(oc) - radius * radius;
+    auto const discriminant = half_b * half_b - a * c;
 
-    if(det < 0) {
-        return 0;
+    if(discriminant < 0) {
+        return 0.0;
     }
 
-    det = std::sqrt(det);
-    t = b - det;
+    auto const sqrtd = std::sqrt(discriminant);
+    auto root = (-half_b - sqrtd) / a;
 
-    if(t > epsilon) {
-        return t;
+    if(root < epsilon) {
+        root = (-half_b + sqrtd) / a;
+
+        if(root < epsilon) {
+            return 0.0;
+        }
     }
 
-    t = b + det;
-
-    if(t > epsilon) {
-        return t;
-    }
-
-    return 0.0;
+    return root;
 }
