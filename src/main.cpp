@@ -60,8 +60,9 @@ using sphere_t = pt::sphere;
 [[nodiscard]] auto
 specular_ray(ray const& original, vec3 const& hit_point, vec3 const& outward_normal, pt::rand_state& rng) -> ray
 {
+    double constexpr fuzziness = 0.0;
     auto const reflected = original.direction - outward_normal * 2.0 * outward_normal.dot(original.direction);
-    auto const factor = rng.generate();
+    auto const factor = rng.generate() * fuzziness;
     return ray{ hit_point, reflected + vec3{ factor, factor, factor } };
 }
 
