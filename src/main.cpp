@@ -41,41 +41,81 @@ using reflection_type = pt::reflection_type;
     return t < pt::inf;
 }
 
-[[nodiscard]] auto diffuse_ray(vec3 const& hit_point, [[maybe_unused]] vec3 const& normal, pt::rand_state& rng) -> ray
+struct hit_record
+{
+    ray original_ray{};
+    vec3 hit_point{ 0, 0, 0 };
+    vec3 outward_normal{ 0, 0, 0 };
+    vec3 normal{ 0, 0, 0 };
+    bool front_facing{ false };
+};
+
+[[nodiscard]] auto get_hit_point_at(pt::sphere const& sphere, ray const& r, double const t) noexcept -> hit_record
+{
+    vec3 const hit_point = r.at(t);
+    vec3 const outward_normal = (hit_point - sphere.position).norm();
+    bool const front_facing = outward_normal.dot(r.direction) < 0;
+    // front facing normal:
+    vec3 const normal = front_facing ? outward_normal : outward_normal * -1;
+
+    return { r, hit_point, outward_normal, normal, front_facing };
+}
+
+[[nodiscard]] auto diffuse_ray(hit_record const& record, pt::rand_state& rng) -> ray
 {
     double const phi = 2 * pt::pi * rng.generate();
     double const random_angle = rng.generate(); // 1 - cos^2 theta
     double const sin_theta = std::sqrt(random_angle);
     double const cos_theta = std::sqrt(1.0 - random_angle);
 
-    vec3 const w = normal;
+    vec3 const w = record.normal;
     vec3 const u = (std::abs(w.x) > 0.1 ? vec3{ 0, 1, 0 } : vec3{ 1, 0, 0 }).cross(w).norm();
     vec3 const v = w.cross(u);
     vec3 const new_direction = (u * std::cos(phi) * sin_theta + v * std::sin(phi) * sin_theta + w * cos_theta).norm();
 
-    return ray{ hit_point, new_direction };
+    return ray{ record.hit_point, new_direction };
 }
 
-[[nodiscard]] auto
-specular_ray(ray const& original, vec3 const& hit_point, vec3 const& outward_normal, pt::rand_state& rng) -> ray
+[[nodiscard]] auto specular_ray(hit_record const& record, pt::rand_state& rng) -> ray
 {
     double constexpr fuzziness = 0.0;
-    auto const reflected = original.direction - outward_normal * 2.0 * outward_normal.dot(original.direction);
+    auto const reflected = record.original_ray.direction -
+                           record.outward_normal * 2.0 * record.outward_normal.dot(record.original_ray.direction);
     auto const factor = rng.generate() * fuzziness;
-    return ray{ hit_point, reflected + vec3{ factor, factor, factor } };
+    return ray{ record.hit_point, reflected + vec3{ factor, factor, factor } };
 }
 
-[[nodiscard]] auto
-dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double const etai_over_etat) -> ray
+[[nodiscard]] auto dielectric_ray(hit_record const& record, pt::rand_state& rng) -> ray
 {
-    auto const cos_theta = std::min((uv * -1.0).dot(normal), 1.0);
-    vec3 const r_out_perp = (uv + normal * cos_theta) * etai_over_etat;
-    vec3 const r_out_parallel = normal * (-std::sqrt(std::abs(1.0 - r_out_perp.dot(r_out_perp))));
+    constexpr double refraction_index = 2.0;
+    double const refraction_ratio = record.front_facing ? (1.0 / refraction_index) : refraction_index;
 
-    return ray{ hit_point, r_out_perp + r_out_parallel };
+    auto r = record.original_ray;
+    auto const unit_direction = r.direction.norm();
+
+    double const cos_theta = std::min((unit_direction * -1.0).dot(record.normal), 1.0);
+    double const sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+
+    bool cannot_refract = refraction_ratio * sin_theta > 1.0;
+
+    auto reflectance = [](double const cosine, double const ref_idx) noexcept -> double {
+        constexpr int offset = 5;
+        auto r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+        r0 *= r0;
+        return r0 + (1.0 - r0) * std::pow(1.0 - cosine, offset);
+    };
+
+    if(cannot_refract || reflectance(cos_theta, refraction_ratio) > rng.generate()) {
+        return specular_ray(record, rng);
+    }
+
+    vec3 const r_out_perp = (unit_direction + record.normal * cos_theta) * refraction_ratio;
+    vec3 const r_out_parallel = record.normal * (-std::sqrt(std::abs(1.0 - r_out_perp.dot(r_out_perp))));
+
+    return ray{ record.hit_point, r_out_perp + r_out_parallel };
 }
 
-[[nodiscard]] auto radiance(const ray& r, int const depth, pt::rand_state& rng) -> vec3
+[[nodiscard]] auto radiance(ray const& r, int const depth, pt::rand_state& rng) -> vec3
 {
     constexpr int russian_roulette_threshold = 4;
     double closest_distance = 0.0;
@@ -86,11 +126,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
     }
 
     auto const& obj = pt::spheres.at(object_index);
-    vec3 const hit_point = r.at(closest_distance);
-    vec3 const outward_normal = (hit_point - obj.position).norm();
-    bool const front_facing = outward_normal.dot(r.direction) < 0;
-    // front facing normal:
-    vec3 const normal = front_facing ? outward_normal : outward_normal * -1;
+    auto const record = get_hit_point_at(obj, r, closest_distance);
     vec3 color = obj.color;
 
     double const probability = std::max({ color.x, color.y, color.z });
@@ -106,38 +142,13 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
 
     switch(obj.reflection) {
     case reflection_type::diffuse: {
-        return obj.emission + color.blend(radiance(diffuse_ray(hit_point, normal, rng), depth + 1, rng));
+        return obj.emission + color.blend(radiance(diffuse_ray(record, rng), depth + 1, rng));
     }
     case reflection_type::specular: {
-        return obj.emission + color.blend(radiance(specular_ray(r, hit_point, outward_normal, rng), depth + 1, rng));
+        return obj.emission + color.blend(radiance(specular_ray(record, rng), depth + 1, rng));
     }
     case reflection_type::dielectric: {
-        constexpr double refraction_index = 2.0;
-        double const refraction_ratio = front_facing ? (1.0 / refraction_index) : refraction_index;
-        auto ray_in = r;
-        auto const unit_direction = ray_in.direction.norm();
-
-        double const cos_theta = std::min((unit_direction * -1.0).dot(normal), 1.0);
-        double const sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
-
-        bool cannot_refract = refraction_ratio * sin_theta > 1.0;
-        ray refl{};
-
-        auto reflectance = [](double const cosine, double const ref_idx) noexcept -> double {
-            constexpr int offset = 5;
-            auto r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
-            r0 *= r0;
-            return r0 + (1.0 - r0) * std::pow(1.0 - cosine, offset);
-        };
-
-        if(cannot_refract || reflectance(cos_theta, refraction_ratio) > rng.generate()) {
-            refl = specular_ray(r, hit_point, outward_normal, rng);
-        }
-        else {
-            refl = dielectric_ray(hit_point, unit_direction, normal, refraction_ratio);
-        }
-
-        return obj.emission + color.blend(radiance(refl, depth + 1, rng));
+        return obj.emission + color.blend(radiance(dielectric_ray(record, rng), depth + 1, rng));
     }
     }
 
