@@ -136,6 +136,51 @@ using reflection_type = pt::reflection_type;
     return vec3{ 0, 0, 0 };
 }
 
+struct camera_config
+{
+    vec3 position{ 0, 0, 0 };
+    vec3 direction{ 0, 0, 0 };
+    double aspect_ratio{ 16.0 / 9.0 };
+    double vertical_fov_radians{ 0.785398163 }; // default value is approximately 45 degrees
+};
+
+struct camera
+{
+    vec3 position{ 0, 0, 0 };
+    vec3 direction{ 0, 0, 0 };
+    vec3 cam_x_axis{ 0, 0, 0 };
+    vec3 cam_y_axis{ 0, 0, 0 };
+    double aspect_ratio{ 0.0 };
+    double fov_scale{ 0.0 };
+
+    [[nodiscard]] static auto with_config(camera_config cfg) noexcept -> camera
+    {
+        double const fov_scale = 2.0 * std::tan(0.5 * cfg.vertical_fov_radians);
+        vec3 cam_x_axis{ cfg.aspect_ratio * fov_scale, 0, 0 };
+        vec3 direction = cfg.direction.norm();
+
+        return camera{ cfg.position,
+                       direction,
+                       cam_x_axis,
+                       cam_x_axis.cross(direction).norm() * fov_scale, // cam_y_axis
+                       cfg.aspect_ratio,
+                       fov_scale };
+    }
+
+    ///
+    /// \param u The x coordinate between 0.0 and 1.0.
+    /// \param v The y coordinate between 0.0 and 1.0.
+    ///
+    [[nodiscard]] auto get_ray(double const u, double const v) const noexcept -> ray
+    {
+        vec3 const offset_x = cam_x_axis * (u - 0.5);
+        vec3 const offset_y = cam_y_axis * (v - 0.5);
+        vec3 new_direction = direction + offset_x + offset_y;
+
+        return ray{ position + new_direction * 140.0, new_direction.norm() };
+    }
+};
+
 auto main(int argc, char* argv[]) -> int
 {
     // how many subpixels per row/column?
@@ -145,15 +190,14 @@ auto main(int argc, char* argv[]) -> int
     int constexpr h = 768;
     int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
 
-    ray cam{ vec3{ 50, 51, 295.6 }, vec3{ 0, -0.042612, -1 }.norm() };
+    camera_config cfg{};
+    cfg.position = vec3{ 50, 51, 295.6 };
+    cfg.direction = vec3{ 0, -0.042612, -1 };
+    cfg.aspect_ratio = (w * 1.0) / (h * 1.0);
+    cfg.vertical_fov_radians = 0.502643;
 
-    constexpr double aspect_ratio = (w * 1.0) / (h * 1.0);
-    constexpr double vertical_fov = 0.502643; // approx. 28 degrees
-    double const fov_scale = 2.0 * std::tan(0.5 * vertical_fov);
+    auto const cam = camera::with_config(cfg);
 
-    vec3 const cam_x_axis = vec3{ aspect_ratio, 0, 0 } * fov_scale;
-    // cam_y_axis is orghogonal to both x and forward axis
-    vec3 const cam_y_axis = cam_x_axis.cross(cam.direction).norm() * fov_scale;
     std::vector<vec3> image{};
     image.resize(w * h, vec3{ 0, 0, 0 });
 
@@ -161,7 +205,7 @@ auto main(int argc, char* argv[]) -> int
     tf::Taskflow taskflow{};
 
     for(int y = 0; y < h; y++) {
-        taskflow.emplace([&image, y, samps, cam, cam_x_axis, cam_y_axis] {
+        taskflow.emplace([&image, y, samps, &cam] {
             std::cerr << fmt::format(
                 "\rRendering ({} spp) {:>5.2}%", samps * num_subpixels * num_subpixels, 100.0 * y / (h - 1));
 
@@ -176,16 +220,12 @@ auto main(int argc, char* argv[]) -> int
                         vec3 r{ 0, 0, 0 };
 
                         for(int s = 0; s < samps; s++) {
+                            // At what point on the x/y axis are we on? (between 0.0 and 1.0)
                             constexpr double subpixel_length = 1.0 / num_subpixels;
                             double const x_in_subpixel = (x + sx * subpixel_length + rng.generate() * subpixel_length);
                             double const y_in_subpixel = (y + sy * subpixel_length + rng.generate() * subpixel_length);
 
-                            // At what point on the x/y axis are we on? (between -0.5 and 0.5)
-                            vec3 const offset_x = cam_x_axis * (x_in_subpixel / w - 0.5);
-                            vec3 const offset_y = cam_y_axis * (y_in_subpixel / h - 0.5);
-                            vec3 new_direction = cam.direction + offset_x + offset_y;
-
-                            ray const new_ray{ cam.origin + new_direction * 140.0, new_direction.norm() };
+                            ray const new_ray{ cam.get_ray(x_in_subpixel / w, y_in_subpixel / h) };
                             vec3 const contributor = radiance(new_ray, 0, rng);
                             r = r + contributor * (1.0 / samps);
                         }
