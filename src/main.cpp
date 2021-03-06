@@ -23,7 +23,6 @@
 using vec3 = pt::vec3;
 using ray = pt::ray;
 using reflection_type = pt::reflection_type;
-using sphere_t = pt::sphere;
 
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
@@ -86,7 +85,7 @@ dielectric_ray(vec3 const& hit_point, vec3 const& uv, vec3 const& normal, double
         return vec3{ 0.0, 0.0, 0.0 };
     }
 
-    const sphere_t& obj = pt::spheres.at(object_index);
+    auto const& obj = pt::spheres.at(object_index);
     vec3 const hit_point = r.at(closest_distance);
     vec3 const outward_normal = (hit_point - obj.position).norm();
     bool const front_facing = outward_normal.dot(r.direction) < 0;
