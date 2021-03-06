@@ -12,6 +12,7 @@
 #include <taskflow/taskflow.hpp>
 
 #include "constants.hpp"
+#include "hit_record.hpp"
 #include "random_state.hpp"
 #include "ray.hpp"
 #include "reflection.hpp"
@@ -41,27 +42,7 @@ using reflection_type = pt::reflection_type;
     return t < pt::inf;
 }
 
-struct hit_record
-{
-    ray original_ray{};
-    vec3 hit_point{ 0, 0, 0 };
-    vec3 outward_normal{ 0, 0, 0 };
-    vec3 normal{ 0, 0, 0 };
-    bool front_facing{ false };
-};
-
-[[nodiscard]] auto get_hit_record_at(pt::sphere const& sphere, ray const& r, double const t) noexcept -> hit_record
-{
-    vec3 const hit_point = r.at(t);
-    vec3 const outward_normal = (hit_point - sphere.position).norm();
-    bool const front_facing = outward_normal.dot(r.direction) < 0;
-    // front facing normal:
-    vec3 const normal = front_facing ? outward_normal : outward_normal * -1;
-
-    return { r, hit_point, outward_normal, normal, front_facing };
-}
-
-[[nodiscard]] auto diffuse_ray(hit_record const& record, pt::rand_state& rng) -> ray
+[[nodiscard]] auto diffuse_ray(pt::hit_record const& record, pt::rand_state& rng) -> ray
 {
     double const phi = 2 * pt::pi * rng.generate();
     double const random_angle = rng.generate(); // 1 - cos^2 theta
@@ -76,7 +57,7 @@ struct hit_record
     return ray{ record.hit_point, new_direction };
 }
 
-[[nodiscard]] auto specular_ray(hit_record const& record, pt::rand_state& rng) -> ray
+[[nodiscard]] auto specular_ray(pt::hit_record const& record, pt::rand_state& rng) -> ray
 {
     double constexpr fuzziness = 0.0;
     auto const reflected = record.original_ray.direction -
@@ -85,7 +66,7 @@ struct hit_record
     return ray{ record.hit_point, reflected + vec3{ factor, factor, factor } };
 }
 
-[[nodiscard]] auto dielectric_ray(hit_record const& record, pt::rand_state& rng) -> ray
+[[nodiscard]] auto dielectric_ray(pt::hit_record const& record, pt::rand_state& rng) -> ray
 {
     constexpr double refraction_index = 2.0;
     double const refraction_ratio = record.front_facing ? (1.0 / refraction_index) : refraction_index;
