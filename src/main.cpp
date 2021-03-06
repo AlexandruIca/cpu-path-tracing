@@ -50,7 +50,7 @@ struct hit_record
     bool front_facing{ false };
 };
 
-[[nodiscard]] auto get_hit_point_at(pt::sphere const& sphere, ray const& r, double const t) noexcept -> hit_record
+[[nodiscard]] auto get_hit_record_at(pt::sphere const& sphere, ray const& r, double const t) noexcept -> hit_record
 {
     vec3 const hit_point = r.at(t);
     vec3 const outward_normal = (hit_point - sphere.position).norm();
@@ -126,7 +126,7 @@ struct hit_record
     }
 
     auto const& obj = pt::spheres.at(object_index);
-    auto const record = get_hit_point_at(obj, r, closest_distance);
+    auto const record = get_hit_record_at(obj, r, closest_distance);
     vec3 color = obj.color;
 
     double const probability = std::max({ color.x, color.y, color.z });
