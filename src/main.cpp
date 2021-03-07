@@ -166,7 +166,7 @@ auto main(int argc, char* argv[]) -> int
     cfg.direction = pt::vec3{ 0.0, 0.0, -1.0 };
     cfg.aspect_ratio = (w * 1.0) / (h * 1.0);
     cfg.vertical_fov_radians = 1.2;
-    cfg.aperture = 0.5;
+    cfg.aperture = 0.2;
     cfg.focus_distance = (cfg.position - cfg.direction).length();
 
     auto const cam = pt::camera::with_config(cfg);
