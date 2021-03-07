@@ -94,44 +94,62 @@
     return pt::ray{ record.hit_point, r_out_perp + r_out_parallel };
 }
 
-[[nodiscard]] auto radiance(pt::ray const& r, int const depth, pt::rand_state& rng) -> pt::vec3
+///
+/// emisson + reflectance * radiance
+/// Iteratively:
+/// emisson0 + reflectance0 * emisson1 + reflectance0 * reflectance1 * emisson2 + ...
+///
+[[nodiscard]] auto radiance(pt::ray const& ray, pt::rand_state& rng) -> pt::vec3
 {
     constexpr int russian_roulette_threshold = 4;
-    double closest_distance = 0.0;
-    std::size_t object_index = 0;
+    pt::vec3 accumulated_emission{ 0, 0, 0 };
+    pt::vec3 accumulated_reflectance{ 1, 1, 1 };
+    pt::ray r = ray;
 
-    if(!intersect(r, closest_distance, object_index)) {
-        return pt::vec3{ 0.0, 0.0, 0.0 };
-    }
+    for(int depth = 0; depth < pt::depth_limit; ++depth) {
+        double closest_distance = 0.0;
+        std::size_t object_index = 0;
 
-    auto const& obj = pt::spheres.at(object_index);
-    auto const record = get_hit_record_at(obj, r, closest_distance);
-    pt::vec3 color = obj.color;
-
-    double const probability = std::max({ color.x, color.y, color.z });
-
-    if(depth > russian_roulette_threshold) {
-        if(rng.generate() < probability) {
-            color = color * (1.0 / probability);
+        if(!intersect(r, closest_distance, object_index)) {
+            return accumulated_emission;
         }
-        else {
-            return obj.emission;
+
+        auto const& obj = pt::spheres.at(object_index);
+        auto const record = get_hit_record_at(obj, r, closest_distance);
+        pt::vec3 color = obj.color;
+
+        accumulated_emission = accumulated_emission + accumulated_reflectance.blend(obj.emission);
+
+        double const probability = std::max({ color.x, color.y, color.z });
+
+        if(depth > russian_roulette_threshold) {
+            if(rng.generate() < probability) {
+                color = color * (1.0 / probability);
+            }
+            else {
+                return accumulated_emission;
+            }
+        }
+
+        accumulated_reflectance = accumulated_reflectance.blend(color);
+
+        switch(obj.reflection) {
+        case pt::reflection_type::diffuse: {
+            r = diffuse_ray(record, rng);
+            break;
+        }
+        case pt::reflection_type::specular: {
+            r = specular_ray(record, rng);
+            break;
+        }
+        case pt::reflection_type::dielectric: {
+            r = dielectric_ray(record, rng);
+            break;
+        }
         }
     }
 
-    switch(obj.reflection) {
-    case pt::reflection_type::diffuse: {
-        return obj.emission + color.blend(radiance(diffuse_ray(record, rng), depth + 1, rng));
-    }
-    case pt::reflection_type::specular: {
-        return obj.emission + color.blend(radiance(specular_ray(record, rng), depth + 1, rng));
-    }
-    case pt::reflection_type::dielectric: {
-        return obj.emission + color.blend(radiance(dielectric_ray(record, rng), depth + 1, rng));
-    }
-    }
-
-    return pt::vec3{ 0, 0, 0 };
+    return accumulated_emission;
 }
 
 auto main(int argc, char* argv[]) -> int
@@ -182,7 +200,7 @@ auto main(int argc, char* argv[]) -> int
                                 (y + sy * subpixel_length + rng.generate_between(0.0, subpixel_length));
 
                             pt::ray const new_ray{ cam.get_ray(x_in_subpixel / w, y_in_subpixel / h, rng) };
-                            pt::vec3 const contributor = radiance(new_ray, 0, rng);
+                            pt::vec3 const contributor = radiance(new_ray, rng);
                             r = r + contributor * (1.0 / samps);
                         }
 
