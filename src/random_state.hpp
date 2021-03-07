@@ -18,6 +18,7 @@ struct rand_state
 
     [[nodiscard]] static auto default_with_seed(unsigned short seed) -> rand_state;
     [[nodiscard]] auto generate() -> double;
+    [[nodiscard]] auto generate_between(double min, double max) -> double;
 };
 
 } // namespace pt

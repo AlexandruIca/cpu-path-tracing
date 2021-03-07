@@ -145,6 +145,8 @@ struct camera_config
     double aspect_ratio{ 16.0 / 9.0 };
     double vertical_fov_radians{ 0.785398163 }; // default value is approximately 45 degrees
     double focal_length{ 1.0 };
+    double aperture{ 0.0 };
+    double focus_distance{ 0.0 };
 };
 
 struct camera
@@ -153,6 +155,10 @@ struct camera
     vec3 lower_left_corner{ 0, 0, 0 };
     vec3 cam_x_axis{ 0, 0, 0 };
     vec3 cam_y_axis{ 0, 0, 0 };
+    vec3 u{ 0, 0, 0 };
+    vec3 v{ 0, 0, 0 };
+    vec3 w{ 0, 0, 0 };
+    double lens_radius{ 0.0 };
 
     [[nodiscard]] static auto with_config(camera_config const& cfg) noexcept -> camera
     {
@@ -163,11 +169,24 @@ struct camera
         auto const u = cfg.up.cross(w).norm();
         auto const v = w.cross(u);
 
-        vec3 const cam_x_axis = u * viewport_width;
-        vec3 const cam_y_axis = v * viewport_height;
-        vec3 const lower_left_corner = cfg.position - cam_x_axis * 0.5 - cam_y_axis * 0.5 - w;
+        vec3 const cam_x_axis = u * viewport_width * cfg.focus_distance;
+        vec3 const cam_y_axis = v * viewport_height * cfg.focus_distance;
+        vec3 const lower_left_corner = cfg.position - cam_x_axis * 0.5 - cam_y_axis * 0.5 - w * cfg.focus_distance;
 
-        return camera{ cfg.position, lower_left_corner, cam_x_axis, cam_y_axis };
+        return camera{ cfg.position, lower_left_corner, cam_x_axis, cam_y_axis, u, v, w, cfg.aperture / 2.0 };
+    }
+
+    [[nodiscard]] static auto random_in_unit_disk(pt::rand_state& rng) -> vec3
+    {
+        for(;;) {
+            vec3 const point{ rng.generate_between(-1.0, 1.0), rng.generate_between(-1.0, 1.0), 0.0 };
+
+            if(point.dot(point) >= 1.0) {
+                continue;
+            }
+
+            return point;
+        }
     }
 
     ///
@@ -176,10 +195,12 @@ struct camera
     ///
     /// Basically divide x by width and y by height before passing them here.
     ///
-    [[nodiscard]] auto get_ray(double const u, double const v) const noexcept -> ray
+    [[nodiscard]] auto get_ray(double const s, double const t, pt::rand_state& rng) const noexcept -> ray
     {
-        vec3 direction{ lower_left_corner + cam_x_axis * u + cam_y_axis * v - position };
-        return ray{ position, direction };
+        auto const rd = random_in_unit_disk(rng) * lens_radius;
+        vec3 const offset{ rd * s + rd * t };
+        vec3 direction{ lower_left_corner + cam_x_axis * s + cam_y_axis * t - position - offset };
+        return ray{ position + offset, direction };
     }
 };
 
@@ -197,6 +218,8 @@ auto main(int argc, char* argv[]) -> int
     cfg.direction = vec3{ 0.0, 0.0, -1.0 };
     cfg.aspect_ratio = (w * 1.0) / (h * 1.0);
     cfg.vertical_fov_radians = 1.2;
+    cfg.aperture = 0.5;
+    cfg.focus_distance = (cfg.position - cfg.direction).length();
 
     auto const cam = camera::with_config(cfg);
     std::vector<vec3> image{};
@@ -223,10 +246,12 @@ auto main(int argc, char* argv[]) -> int
                         for(int s = 0; s < samps; s++) {
                             // At what point on the x/y axis are we on? (between 0.0 and 1.0)
                             constexpr double subpixel_length = 1.0 / num_subpixels;
-                            double const x_in_subpixel = (x + sx * subpixel_length + rng.generate() * subpixel_length);
-                            double const y_in_subpixel = (y + sy * subpixel_length + rng.generate() * subpixel_length);
+                            double const x_in_subpixel =
+                                (x + sx * subpixel_length + rng.generate_between(0.0, subpixel_length));
+                            double const y_in_subpixel =
+                                (y + sy * subpixel_length + rng.generate_between(0.0, subpixel_length));
 
-                            ray const new_ray{ cam.get_ray(x_in_subpixel / w, y_in_subpixel / h) };
+                            ray const new_ray{ cam.get_ray(x_in_subpixel / w, y_in_subpixel / h, rng) };
                             vec3 const contributor = radiance(new_ray, 0, rng);
                             r = r + contributor * (1.0 / samps);
                         }

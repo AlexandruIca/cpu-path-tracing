@@ -63,4 +63,9 @@ auto vec3::operator[](int const index) const noexcept -> double const&
     return x;
 }
 
+auto vec3::length() const noexcept -> double
+{
+    return std::hypot(x, y, z);
+}
+
 } // namespace pt

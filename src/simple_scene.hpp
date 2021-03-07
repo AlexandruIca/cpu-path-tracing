@@ -35,7 +35,7 @@ inline std::array<sphere_t, 5> spheres = { {
               vec3{ 0.0, 0.7, 0.1 },
               reflection_type::diffuse }, // Light center
     sphere_t{ 1.0,
-              vec3{ 1.0, 3.0, -1.0 },
+              vec3{ 1.0, 3.1, -1.0 },
               vec3{ 30.0, 30.0, 30.0 },
               vec3{ 0.0, 0.0, 0.0 },
               reflection_type::diffuse }, // Light up

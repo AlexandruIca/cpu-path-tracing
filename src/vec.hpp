@@ -28,6 +28,7 @@ struct vec3
     [[nodiscard]] auto dot(const vec3& b) const noexcept -> double;
     [[nodiscard]] auto cross(vec3 const& b) const noexcept -> vec3;
     [[nodiscard]] auto operator[](int index) const noexcept -> double const&;
+    [[nodiscard]] auto length() const noexcept -> double;
 };
 
 } // namespace pt

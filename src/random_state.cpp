@@ -10,3 +10,8 @@ auto pt::rand_state::generate() -> double
 {
     return dist(rng);
 }
+
+auto pt::rand_state::generate_between(double const min, double const max) -> double
+{
+    return min + (max - min) * this->generate();
+}
