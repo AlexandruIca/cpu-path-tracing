@@ -16,10 +16,11 @@
 #include "random_state.hpp"
 #include "ray.hpp"
 #include "reflection.hpp"
-#include "smallpt_scene.hpp"
 #include "sphere.hpp"
 #include "utils.hpp"
 #include "vec.hpp"
+
+#include "simple_scene.hpp"
 
 using vec3 = pt::vec3;
 using ray = pt::ray;
@@ -140,31 +141,33 @@ struct camera_config
 {
     vec3 position{ 0, 0, 0 };
     vec3 direction{ 0, 0, 0 };
+    vec3 up{ 0, 1, 0 };
     double aspect_ratio{ 16.0 / 9.0 };
     double vertical_fov_radians{ 0.785398163 }; // default value is approximately 45 degrees
+    double focal_length{ 1.0 };
 };
 
 struct camera
 {
     vec3 position{ 0, 0, 0 };
-    vec3 direction{ 0, 0, 0 };
+    vec3 lower_left_corner{ 0, 0, 0 };
     vec3 cam_x_axis{ 0, 0, 0 };
     vec3 cam_y_axis{ 0, 0, 0 };
-    double aspect_ratio{ 0.0 };
-    double fov_scale{ 0.0 };
 
-    [[nodiscard]] static auto with_config(camera_config cfg) noexcept -> camera
+    [[nodiscard]] static auto with_config(camera_config const& cfg) noexcept -> camera
     {
-        double const fov_scale = 2.0 * std::tan(0.5 * cfg.vertical_fov_radians);
-        vec3 cam_x_axis{ cfg.aspect_ratio * fov_scale, 0, 0 };
-        vec3 direction = cfg.direction.norm();
+        double const viewport_height = 2.0 * std::tan(0.5 * cfg.vertical_fov_radians);
+        double const viewport_width = cfg.aspect_ratio * viewport_height;
 
-        return camera{ cfg.position,
-                       direction,
-                       cam_x_axis,
-                       cam_x_axis.cross(direction).norm() * fov_scale, // cam_y_axis
-                       cfg.aspect_ratio,
-                       fov_scale };
+        auto const w = (cfg.position - cfg.direction).norm();
+        auto const u = cfg.up.cross(w).norm();
+        auto const v = w.cross(u);
+
+        vec3 const cam_x_axis = u * viewport_width;
+        vec3 const cam_y_axis = v * viewport_height;
+        vec3 const lower_left_corner = cfg.position - cam_x_axis * 0.5 - cam_y_axis * 0.5 - w;
+
+        return camera{ cfg.position, lower_left_corner, cam_x_axis, cam_y_axis };
     }
 
     ///
@@ -175,11 +178,8 @@ struct camera
     ///
     [[nodiscard]] auto get_ray(double const u, double const v) const noexcept -> ray
     {
-        vec3 const offset_x = cam_x_axis * (u - 0.5);
-        vec3 const offset_y = cam_y_axis * (v - 0.5);
-        vec3 new_direction = direction + offset_x + offset_y;
-
-        return ray{ position + new_direction * 140.0, new_direction.norm() };
+        vec3 direction{ lower_left_corner + cam_x_axis * u + cam_y_axis * v - position };
+        return ray{ position, direction };
     }
 };
 
@@ -190,16 +190,15 @@ auto main(int argc, char* argv[]) -> int
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr w = 1024;
     int constexpr h = 768;
-    int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
+    [[maybe_unused]] int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
 
     camera_config cfg{};
-    cfg.position = vec3{ 50, 51, 295.6 };
-    cfg.direction = vec3{ 0, -0.042612, -1 };
+    cfg.position = vec3{ -2.0, 2.0, 1.0 };
+    cfg.direction = vec3{ 0.0, 0.0, -1.0 };
     cfg.aspect_ratio = (w * 1.0) / (h * 1.0);
-    cfg.vertical_fov_radians = 0.502643;
+    cfg.vertical_fov_radians = 1.2;
 
     auto const cam = camera::with_config(cfg);
-
     std::vector<vec3> image{};
     image.resize(w * h, vec3{ 0, 0, 0 });
 
