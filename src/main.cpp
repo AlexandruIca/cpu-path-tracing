@@ -10,13 +10,12 @@
 #include <fmt/format.h>
 #include <taskflow/taskflow.hpp>
 
-#include "camera.hpp"
 #include "constants.hpp"
 #include "hit_record.hpp"
 #include "random_state.hpp"
 #include "ray.hpp"
 #include "reflection.hpp"
-#include "sphere.hpp"
+#include "scene.hpp"
 #include "utils.hpp"
 #include "vec.hpp"
 
@@ -25,12 +24,12 @@
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
 ///
-[[nodiscard]] auto intersect(const pt::ray& r, double& t, std::size_t& id) noexcept -> bool
+[[nodiscard]] auto intersect(pt::scene const& scene, const pt::ray& r, double& t, std::size_t& id) noexcept -> bool
 {
     t = pt::inf;
 
-    for(std::size_t i = 0; i < pt::spheres.size(); i++) {
-        if(double const d = pt::spheres.at(i).intersect(r); d > 0 && d < t) {
+    for(std::size_t i = 0; i < scene.spheres.size(); i++) {
+        if(double const d = scene.spheres.at(i).intersect(r); d > 0 && d < t) {
             t = d;
             id = i;
         }
@@ -99,7 +98,7 @@
 /// Iteratively:
 /// emisson0 + reflectance0 * emisson1 + reflectance0 * reflectance1 * emisson2 + ...
 ///
-[[nodiscard]] auto radiance(pt::ray const& ray, pt::rand_state& rng) -> pt::vec3
+[[nodiscard]] auto radiance(pt::scene const& scene, pt::ray const& ray, pt::rand_state& rng) -> pt::vec3
 {
     constexpr int russian_roulette_threshold = 4;
     pt::vec3 accumulated_emission{ 0, 0, 0 };
@@ -110,11 +109,11 @@
         double closest_distance = 0.0;
         std::size_t object_index = 0;
 
-        if(!intersect(r, closest_distance, object_index)) {
+        if(!intersect(scene, r, closest_distance, object_index)) {
             return accumulated_emission;
         }
 
-        auto const& obj = pt::spheres.at(object_index);
+        auto const& obj = scene.spheres.at(object_index);
         auto const record = get_hit_record_at(obj, r, closest_distance);
         pt::vec3 color = obj.color;
 
@@ -157,35 +156,29 @@ auto main(int argc, char* argv[]) -> int
     // how many subpixels per row/column?
     constexpr int num_subpixels = 2;
     std::vector<std::string> args{ argv + 1, argv + argc };
-    int constexpr w = 1024;
-    int constexpr h = 768;
-    [[maybe_unused]] int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
+    int constexpr width = 1024;
+    int constexpr height = 768;
+    int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
 
-    pt::camera_config cfg{};
-    cfg.position = pt::vec3{ -2.0, 2.0, 1.0 };
-    cfg.direction = pt::vec3{ 0.0, 0.0, -1.0 };
-    cfg.aspect_ratio = (w * 1.0) / (h * 1.0);
-    cfg.vertical_fov_radians = 1.2;
-    cfg.aperture = 0.2;
-    cfg.focus_distance = (cfg.position - cfg.direction).length();
-
-    auto const cam = pt::camera::with_config(cfg);
+    auto const some_scene = pt::simple_scene(width, height);
+    auto const cam = pt::camera::with_config(some_scene.camera_parameters);
     std::vector<pt::vec3> image{};
-    image.resize(w * h, pt::vec3{ 0, 0, 0 });
+
+    image.resize(width * height, pt::vec3{ 0, 0, 0 });
 
     tf::Executor executor{};
     tf::Taskflow taskflow{};
 
-    for(int y = 0; y < h; y++) {
-        taskflow.emplace([&image, y, samps, &cam] {
+    for(int y = 0; y < height; y++) {
+        taskflow.emplace([&image, y, samps, &cam, &some_scene] {
             std::cerr << fmt::format(
-                "\rRendering ({} spp) {:>5.2}%", samps * num_subpixels * num_subpixels, 100.0 * y / (h - 1));
+                "\rRendering ({} spp) {:>5.2}%", samps * num_subpixels * num_subpixels, 100.0 * y / (height - 1));
 
             auto const seed = static_cast<unsigned short>(y * y * y);
             auto rng = pt::rand_state::default_with_seed(seed);
 
-            for(unsigned short x = 0; x < w; x++) {
-                auto const i = static_cast<std::size_t>((h - y - 1) * w) + x;
+            for(unsigned short x = 0; x < width; x++) {
+                auto const i = static_cast<std::size_t>((height - y - 1) * width) + x;
 
                 for(int sy = 0; sy < num_subpixels; sy++) {
                     for(int sx = 0; sx < num_subpixels; sx++) {
@@ -199,8 +192,8 @@ auto main(int argc, char* argv[]) -> int
                             double const y_in_subpixel =
                                 (y + sy * subpixel_length + rng.generate_between(0.0, subpixel_length));
 
-                            pt::ray const new_ray{ cam.get_ray(x_in_subpixel / w, y_in_subpixel / h, rng) };
-                            pt::vec3 const contributor = radiance(new_ray, rng);
+                            pt::ray const new_ray{ cam.get_ray(x_in_subpixel / width, y_in_subpixel / height, rng) };
+                            pt::vec3 const contributor = radiance(some_scene, new_ray, rng);
                             r = r + contributor * (1.0 / samps);
                         }
 
@@ -217,9 +210,9 @@ auto main(int argc, char* argv[]) -> int
     std::cerr << std::endl;
 
     std::ofstream g{ "image.ppm" };
-    g << fmt::format("P3\n{} {}\n{}\n", w, h, 255);
+    g << fmt::format("P3\n{} {}\n{}\n", width, height, 255);
 
-    for(std::size_t i = 0; i < w * h; ++i) {
+    for(std::size_t i = 0; i < width * height; ++i) {
         g << fmt::format("{} ", pt::color_to_int(image[i].x));
         g << fmt::format("{} ", pt::color_to_int(image[i].y));
         g << fmt::format("{} ", pt::color_to_int(image[i].z));
