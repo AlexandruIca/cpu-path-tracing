@@ -21,7 +21,8 @@
 #include "vec.hpp"
 
 //#include "simple_scene.hpp"
-#include "box_scene.hpp"
+//#include "box_scene.hpp"
+#include "box_mirror_scene.hpp"
 
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
