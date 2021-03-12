@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <taskflow/taskflow.hpp>
 
+#include "camera.hpp"
 #include "constants.hpp"
 #include "hit_record.hpp"
 #include "random_state.hpp"
@@ -20,6 +21,7 @@
 #include "vec.hpp"
 
 #include "simple_scene.hpp"
+//#include "box_scene.hpp"
 
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
@@ -151,6 +153,45 @@
     return accumulated_emission;
 }
 
+struct render_state
+{
+    pt::scene const& scene;
+    pt::camera const& cam;
+    pt::rand_state& rng;
+    std::vector<pt::vec3>& image;
+    int width = 0;
+    int height = 0;
+    int num_samples = 0;
+    int num_subpixels = 0;
+};
+
+///
+/// \param x Where are we on the x axis.
+/// \param y Where are we on the y axis.
+/// \param sx what fraction of pixel on the x axis.
+/// \param sy what fraction of pixel on the y axis.
+/// \param state See [render_state](\ref render_state).
+///
+auto render_subpixel(int const x, int const y, int const sx, int const sy, render_state& state) -> void
+{
+    auto const row = static_cast<std::size_t>((state.height - y - 1) * state.width) + static_cast<std::size_t>(x);
+    pt::vec3 r{ 0, 0, 0 };
+
+    for(int s = 0; s < state.num_samples; s++) {
+        // At what point on the x/y axis are we on? (between 0.0 and 1.0)
+        double const subpixel_length = 1.0 / state.num_subpixels;
+        double const x_in_subpixel = (x + sx * subpixel_length + state.rng.generate_between(0.0, subpixel_length));
+        double const y_in_subpixel = (y + sy * subpixel_length + state.rng.generate_between(0.0, subpixel_length));
+
+        pt::ray const new_ray = state.cam.get_ray(x_in_subpixel / state.width, y_in_subpixel / state.height, state.rng);
+        pt::vec3 const contributor = radiance(state.scene, new_ray, state.rng);
+        r = r + contributor * (1.0 / state.num_samples);
+    }
+
+    pt::vec3 const subpixel_color = pt::vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) };
+    state.image[row] = state.image[row] + subpixel_color * (1.0 / (state.num_subpixels * state.num_subpixels));
+}
+
 auto main(int argc, char* argv[]) -> int
 {
     // how many subpixels per row/column?
@@ -158,7 +199,7 @@ auto main(int argc, char* argv[]) -> int
     std::vector<std::string> args{ argv + 1, argv + argc };
     int constexpr width = 1024;
     int constexpr height = 768;
-    int const samps = argc == 2 ? std::stoi(args[0]) / num_subpixels : 1;
+    int const samps = argc == 2 ? std::stoi(args[0]) / (num_subpixels * num_subpixels) : 1;
 
     auto const some_scene = pt::simple_scene(width, height);
     auto const cam = pt::camera::with_config(some_scene.camera_parameters);
@@ -176,29 +217,12 @@ auto main(int argc, char* argv[]) -> int
 
             auto const seed = static_cast<unsigned short>(y * y * y);
             auto rng = pt::rand_state::default_with_seed(seed);
+            render_state state{ some_scene, cam, rng, image, width, height, samps, num_subpixels };
 
             for(unsigned short x = 0; x < width; x++) {
-                auto const i = static_cast<std::size_t>((height - y - 1) * width) + x;
-
                 for(int sy = 0; sy < num_subpixels; sy++) {
                     for(int sx = 0; sx < num_subpixels; sx++) {
-                        pt::vec3 r{ 0, 0, 0 };
-
-                        for(int s = 0; s < samps; s++) {
-                            // At what point on the x/y axis are we on? (between 0.0 and 1.0)
-                            constexpr double subpixel_length = 1.0 / num_subpixels;
-                            double const x_in_subpixel =
-                                (x + sx * subpixel_length + rng.generate_between(0.0, subpixel_length));
-                            double const y_in_subpixel =
-                                (y + sy * subpixel_length + rng.generate_between(0.0, subpixel_length));
-
-                            pt::ray const new_ray{ cam.get_ray(x_in_subpixel / width, y_in_subpixel / height, rng) };
-                            pt::vec3 const contributor = radiance(some_scene, new_ray, rng);
-                            r = r + contributor * (1.0 / samps);
-                        }
-
-                        pt::vec3 const subpixel_color = pt::vec3{ pt::clamp(r.x), pt::clamp(r.y), pt::clamp(r.z) };
-                        image[i] = image[i] + subpixel_color * (1.0 / (num_subpixels * num_subpixels));
+                        render_subpixel(x, y, sx, sy, state);
                     }
                 }
             }
