@@ -103,7 +103,7 @@
 [[nodiscard]] auto radiance(pt::scene const& scene, pt::ray const& ray, pt::rand_state& rng) -> pt::vec3
 {
     constexpr int russian_roulette_threshold = 4;
-    pt::vec3 accumulated_emission{ 0, 0, 0 };
+    pt::vec3 accumulated_emission{ 0.0, 0.0, 0.0 };
     pt::vec3 accumulated_reflectance{ 1, 1, 1 };
     pt::ray r = ray;
 
@@ -112,7 +112,10 @@
         std::size_t object_index = 0;
 
         if(!intersect(scene, r, closest_distance, object_index)) {
-            return accumulated_emission;
+            auto const unit_direction = r.direction.norm();
+            auto const t = 0.5 * (unit_direction.y + 1.0);
+            auto const background = pt::vec3{ 1.0, 1.0, 1.0 } * (1.0 - t) + pt::vec3{ 0.5, 0.7, 1.0 } * t;
+            return accumulated_emission + accumulated_reflectance.blend(background);
         }
 
         auto const& obj = scene.spheres.at(object_index);
