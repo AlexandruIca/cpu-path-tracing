@@ -20,8 +20,8 @@
 #include "utils.hpp"
 #include "vec.hpp"
 
-#include "simple_scene.hpp"
-//#include "box_scene.hpp"
+//#include "simple_scene.hpp"
+#include "box_scene.hpp"
 
 ///
 /// \returns The closest intersection point in the whole scene if anything is found, 0 otherwise.
@@ -204,7 +204,7 @@ auto main(int argc, char* argv[]) -> int
     int constexpr height = 768;
     int const samps = argc == 2 ? std::stoi(args[0]) / (num_subpixels * num_subpixels) : 1;
 
-    auto const some_scene = pt::simple_scene(width, height);
+    auto const some_scene = pt::box_scene(width, height);
     auto const cam = pt::camera::with_config(some_scene.camera_parameters);
     std::vector<pt::vec3> image{};
 
